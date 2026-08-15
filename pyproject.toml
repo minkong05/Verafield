@@ -27,6 +27,12 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["backend", "packages/shared_types"]
 
+[tool.pytest.ini_options]
+# Belt-and-suspenders alongside the editable install: on macOS, Python 3.14
+# skips .pth files that the OS has (sometimes asynchronously) flagged
+# UF_HIDDEN, which can silently drop packages/shared_types off sys.path.
+pythonpath = ["packages"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py311"
