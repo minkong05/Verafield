@@ -10,6 +10,8 @@ Data models and schemas shared between `apps/field-collector`, `apps/mill-dashbo
 
 Type/schema definitions mirroring `backend/db`'s core entities (Household, Plot, Document, Consent, VerificationResult, EvidencePack) — not the database schema itself, just the wire/API shape.
 
+**Implemented so far** (Feature 01, Gap Assessment Report): `enums.py` (`EvidenceCategory`, `GapStatus`), `household.py`, `gap_assessment.py`.
+
 ## Depends on
 
 Nothing — this is the lowest-level package. Everything else depends on it.
