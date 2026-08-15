@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 TAPAK: an EUDR (EU Deforestation Regulation) upstream evidence-preparation service for independent oil-palm smallholders in Sabah and Sarawak, Malaysia. `docs/business_plan.md` has the full pitch, `docs/tech.md` (§6) is the technical-feasibility writeup this repo is scaffolded from, `docs/eudr.md` is the consolidated regulation text, and `docs/roadmap/00-overview.md` is the MVP build order this codebase should track.
 
-The repo is a monorepo skeleton: `apps/` (two deployables), `backend/` (one API service), `packages/` (shared types). Only `backend/` and `packages/shared_types/` have real code today — `apps/field-collector` and `apps/mill-dashboard` have no chosen stack yet, and everything under `backend/services/` and `backend/db/` is README-only (no implementation). Check each folder's README before assuming an interface exists.
+The repo is a monorepo skeleton: `apps/` (two deployables), `backend/` (one API service), `packages/` (shared types). Only `backend/` and `packages/shared_types/` have real code today — `apps/field-collector` and `apps/mill-dashboard` have no chosen stack yet. Under `backend/services/` and `backend/db/`, only the `gap_assessment` slice (roadmap feature 01) is implemented end-to-end; `rules_engine`, `verification_engine`, `evidence_pack`, `national_integration`, and `renewal` are still README-only. Check each folder's README before assuming an interface exists.
 
 ## Commands
 
@@ -25,7 +25,18 @@ ruff format --check .   # what CI runs
 # Tests
 pytest                  # backend/tests/, mirrors the module under test (e.g. routes/health.py -> tests/test_health.py)
 pytest -k name          # run tests matching "name"
-# Tests use FastAPI's TestClient directly — no Docker/Postgres needed for tests that exist today.
+# Most tests use FastAPI's TestClient directly and need no database.
+# Tests that touch the DB (test_household.py, test_gap_assessment.py, test_db_models.py)
+# need Postgres reachable first: `docker compose up -d db`. They run against a separate
+# `tapak_test` database, auto-created and migrated with real Alembic migrations (not
+# Base.metadata.create_all()), so migration files themselves get exercised. Override with
+# TEST_DATABASE_URL; defaults to postgresql+psycopg://tapak:tapak@localhost:5432/tapak_test.
+
+# Migrations (Alembic) — always pass -c backend/alembic.ini, run from repo root
+alembic -c backend/alembic.ini revision --autogenerate -m "describe the change"
+docker compose up -d db
+DATABASE_URL=postgresql+psycopg://tapak:tapak@localhost:5432/tapak alembic -c backend/alembic.ini upgrade head
+# New ORM classes must be exported from backend/db/models/__init__.py or autogenerate won't see them.
 
 # Stack (Postgres + FastAPI backend)
 docker compose up -d --build   # rebuild + start; needed after pyproject.toml/Dockerfile/backend code changes
@@ -33,9 +44,11 @@ docker compose logs -f backend
 docker compose down            # stop (keeps data volume)
 docker compose down -v         # stop + wipe Postgres volume
 curl http://localhost:8000/health   # {"status":"ok"}
+# Migrations are NOT applied automatically on container start — run the alembic upgrade
+# command above once after `--build` and again after every new migration lands.
 ```
 
-Before opening a PR: `ruff check .` clean, `ruff format .` run, `pytest` passes, and if `pyproject.toml`/`Dockerfile`/`backend/`/`packages/` changed, `docker compose up -d --build` still works and `/health` still returns ok. Full detail (troubleshooting Docker, adding a dependency) is in [`DEV.md`](DEV.md).
+Before opening a PR: `ruff check .` clean, `ruff format .` run, `pytest` passes, and if `pyproject.toml`/`Dockerfile`/`backend/`/`packages/` changed, `docker compose up -d --build` still works and `/health` still returns ok. If you added/changed a migration, also verify it applies cleanly against a fresh database. CI (`.github/workflows/ci.yml`) runs these same three jobs (lint, test against a Postgres service container, docker-build) on every push/PR to `main`/`dev`. Full detail (troubleshooting Docker, adding a dependency) is in [`DEV.md`](DEV.md).
 
 ## Architecture
 
@@ -44,17 +57,16 @@ Before opening a PR: `ruff check .` clean, `ruff format .` run, `pytest` passes,
 **Request flow:** `apps/field-collector` captures a record offline → syncs to a `backend/routes/` endpoint → route calls `backend/services/rules_engine` and/or `backend/services/verification_engine` (routes stay thin — validate, delegate, shape response; no business logic here) → result written via `backend/db/` → once cleared, `backend/services/evidence_pack` assembles a pack → `apps/mill-dashboard` reads updated status through another `routes/` endpoint. Neither app talks to `services/` or `db/` directly — only through `routes/`.
 
 **`backend/services/`, one folder per domain:**
+- `gap_assessment` (implemented) — intake logic: creates a household record and its per-category checklist status (present / missing / needs_verification) across six fixed EUDR evidence categories. The step upstream of `rules_engine`/`verification_engine` — records what a field officer observed, doesn't evaluate document validity or cross-check for fraud. No scoring/risk-weighting for MVP; a human reads the checklist. One gap assessment per household for MVP.
 - `rules_engine` — the Land Document Playbook: versioned rules mapping state + land type to which documents satisfy Article 9(1)(h). Core in-house IP (tech.md §6.3.1/§4.7), MVP scope is Sabah/Sarawak only. Every household record stores which rule version it was assessed under.
 - `verification_engine` — cross-checks collected data against itself and satellite imagery (deforestation check + the Five-Point Field Check: GPS, photo geotag, land area, MPOB licence, yield); flags anomalies to a human review queue rather than passing silently. Threshold values are calibration data tuned against real households, not hardcoded constants.
 - `evidence_pack` — assembles already-verified records into the Annex II-mapped buyer pack (PDF + GeoJSON). Assembly/formatting only — never re-collects or re-verifies, and refuses to generate a pack if any household in the batch has an unresolved flag.
 - `national_integration` — read-only consumption of Malaysia's SIMS/GeoSAWIT/e-MSPO, keyed on MPOB licence number. Never writes back to those systems, never touches the EU's Article 33 submission system. No other service blocks on this shipping first (verification_engine can use manual data entry as an interim).
 - `renewal` — schedules annual re-verification (EUDR ongoing due-diligence obligations); re-triggers `verification_engine`/`evidence_pack`, doesn't duplicate their logic.
 
-**`backend/db/`:** multi-tenant isolation is enforced at the query/schema level, not hidden in UI — a mill's query must never be able to structurally return another mill's rows. This is a hard rule, not a preference. Retention is five years (EUDR Articles 9(1), 4(3), 12(5)) then scheduled deletion; original document scans stay in Malaysia, only the assembled evidence pack that a mill chooses to send crosses the border.
+**`backend/db/`:** multi-tenant isolation is enforced at the query/schema level, not hidden in UI — a mill's query must never be able to structurally return another mill's rows. This is a hard rule, not a preference. The implemented pattern (see `backend/db/models/household.py` and `gap_assessment.py`): every table carries its own `mill_id` column plus a `UNIQUE(id, mill_id)` constraint, and every child table's foreign key is a composite `ForeignKeyConstraint` on `(parent_id, mill_id)` rather than just `parent_id` — so a row can never be linked to a parent belonging to a different mill at the schema level, not just by convention in application code. Service functions additionally filter every query by `mill_id` explicitly (defense in depth on top of the schema constraint). Routes carry `mill_id` in the URL path (e.g. `/mills/{mill_id}/households/{household_id}/gap-assessment`), not inferred from auth context yet — that'll need revisiting once auth exists. Retention is five years (EUDR Articles 9(1), 4(3), 12(5)) then scheduled deletion; original document scans stay in Malaysia, only the assembled evidence pack that a mill chooses to send crosses the border.
 
-**`packages/shared_types/`:** the lowest-level package (depends on nothing) — wire/API shapes shared by both apps and the backend, mirroring `backend/db`'s core entities (Household, Plot, Document, Consent, VerificationResult, EvidencePack) so the three codebases don't drift on what a record looks like.
-
-**Docker build context:** the backend image builds with the **repo root** as context (not `backend/`), so it can copy `pyproject.toml`, `backend/`, and `packages/` in — keep that in mind when adding files the backend needs at build time.
+**`packages/shared_types/`:** the lowest-level package (depends on nothing) — wire/API shapes shared by both apps and the backend, mirroring `backend/db`'s core entities (Household, Plot, Document, Consent, VerificationResult, EvidencePack) so the three codebases don't drift on what a record looks like. Implemented so far (feature 01): `enums.py` (`EvidenceCategory`, `GapStatus`), `household.py`, `gap_assessment.py`.
 
 ## Working with the roadmap docs
 
