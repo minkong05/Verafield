@@ -5,8 +5,8 @@ from sqlalchemy.orm import Session
 
 from backend.db.session import get_db
 from backend.services.gap_assessment import service
-from shared_types import Household as HouseholdSchema
-from shared_types import HouseholdCreate
+from packages.shared_types import Household as HouseholdSchema
+from packages.shared_types import HouseholdCreate
 
 router = APIRouter(prefix="/mills/{mill_id}/households", tags=["households"])
 

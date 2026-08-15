@@ -5,7 +5,19 @@ from sqlalchemy.exc import IntegrityError
 
 from backend.db.models.gap_assessment import GapAssessment, GapAssessmentItem
 from backend.db.models.household import Household
-from shared_types.enums import EvidenceCategory, GapStatus
+from backend.db.models.rules_engine import (
+    LandDocumentRule,
+    LandOwnershipAssessment,
+    LandOwnershipDocument,
+)
+from shared_types.enums import (
+    DocumentType,
+    EvidenceCategory,
+    GapStatus,
+    LandOwnershipStatus,
+    LandType,
+    MalaysiaState,
+)
 
 
 def _make_household(db_session, mill_id: uuid.UUID) -> Household:
@@ -14,6 +26,14 @@ def _make_household(db_session, mill_id: uuid.UUID) -> Household:
     db_session.commit()
     db_session.refresh(household)
     return household
+
+
+def _get_seeded_rule(db_session, state: MalaysiaState, land_type: LandType) -> LandDocumentRule:
+    return (
+        db_session.query(LandDocumentRule)
+        .filter(LandDocumentRule.state == state, LandDocumentRule.land_type == land_type)
+        .one()
+    )
 
 
 def test_gap_assessment_mill_id_must_match_household_mill_id(db_session) -> None:
@@ -72,6 +92,81 @@ def test_household_can_have_at_most_one_gap_assessment(db_session) -> None:
     db_session.add(
         GapAssessment(mill_id=mill_id, household_id=household.id, assessed_by="Officer B")
     )
+
+    with pytest.raises(IntegrityError):
+        db_session.commit()
+
+
+def test_land_ownership_document_mill_id_must_match_assessment_mill_id(db_session) -> None:
+    mill_id = uuid.uuid4()
+    household = _make_household(db_session, mill_id=mill_id)
+    rule = _get_seeded_rule(db_session, MalaysiaState.SABAH, LandType.NATIVE_TITLE)
+    assessment = LandOwnershipAssessment(
+        mill_id=mill_id,
+        household_id=household.id,
+        state=MalaysiaState.SABAH,
+        land_type=LandType.NATIVE_TITLE,
+        rule_id=rule.id,
+        status=LandOwnershipStatus.CLEARED,
+        assessed_by="Officer Aiman",
+    )
+    db_session.add(assessment)
+    db_session.commit()
+    db_session.refresh(assessment)
+
+    mismatched_document = LandOwnershipDocument(
+        mill_id=uuid.uuid4(),  # deliberately not assessment.mill_id
+        assessment_id=assessment.id,
+        document_type=DocumentType.SABAH_NATIVE_TITLE,
+    )
+    db_session.add(mismatched_document)
+
+    with pytest.raises(IntegrityError):
+        db_session.commit()
+
+
+def test_household_can_have_at_most_one_land_ownership_assessment(db_session) -> None:
+    mill_id = uuid.uuid4()
+    household = _make_household(db_session, mill_id=mill_id)
+    rule = _get_seeded_rule(db_session, MalaysiaState.SABAH, LandType.NATIVE_TITLE)
+    db_session.add(
+        LandOwnershipAssessment(
+            mill_id=mill_id,
+            household_id=household.id,
+            state=MalaysiaState.SABAH,
+            land_type=LandType.NATIVE_TITLE,
+            rule_id=rule.id,
+            status=LandOwnershipStatus.CLEARED,
+            assessed_by="Officer A",
+        )
+    )
+    db_session.commit()
+
+    db_session.add(
+        LandOwnershipAssessment(
+            mill_id=mill_id,
+            household_id=household.id,
+            state=MalaysiaState.SABAH,
+            land_type=LandType.NATIVE_TITLE,
+            rule_id=rule.id,
+            status=LandOwnershipStatus.CLEARED,
+            assessed_by="Officer B",
+        )
+    )
+
+    with pytest.raises(IntegrityError):
+        db_session.commit()
+
+
+def test_land_document_rule_version_state_land_type_must_be_unique(db_session) -> None:
+    existing = _get_seeded_rule(db_session, MalaysiaState.SABAH, LandType.NATIVE_TITLE)
+
+    duplicate_rule = LandDocumentRule(
+        rule_version=existing.rule_version,
+        state=MalaysiaState.SABAH,
+        land_type=LandType.NATIVE_TITLE,
+    )
+    db_session.add(duplicate_rule)
 
     with pytest.raises(IntegrityError):
         db_session.commit()
