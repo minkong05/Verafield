@@ -5,6 +5,7 @@ from shared_types.enums import (
     LandOwnershipStatus,
     LandType,
     MalaysiaState,
+    SignatureMethod,
 )
 from shared_types.gap_assessment import (
     GapAssessment,
@@ -13,6 +14,12 @@ from shared_types.gap_assessment import (
     GapAssessmentItemCreate,
 )
 from shared_types.household import Household, HouseholdCreate
+from shared_types.labour_declaration import (
+    ConsentRecord,
+    ConsentRecordCreate,
+    LabourDeclaration,
+    LabourDeclarationCreate,
+)
 from shared_types.rules_engine import (
     LandDocumentRule,
     LandDocumentRuleRequirement,
@@ -21,6 +28,8 @@ from shared_types.rules_engine import (
 )
 
 __all__ = [
+    "ConsentRecord",
+    "ConsentRecordCreate",
     "DocumentType",
     "EvidenceCategory",
     "GapAssessment",
@@ -30,6 +39,8 @@ __all__ = [
     "GapStatus",
     "Household",
     "HouseholdCreate",
+    "LabourDeclaration",
+    "LabourDeclarationCreate",
     "LandDocumentRule",
     "LandDocumentRuleRequirement",
     "LandOwnershipAssessment",
@@ -37,4 +48,5 @@ __all__ = [
     "LandOwnershipStatus",
     "LandType",
     "MalaysiaState",
+    "SignatureMethod",
 ]

@@ -1,5 +1,6 @@
 from backend.db.models.gap_assessment import GapAssessment, GapAssessmentItem
 from backend.db.models.household import Household
+from backend.db.models.labour_declaration import ConsentRecord, LabourDeclaration
 from backend.db.models.rules_engine import (
     LandDocumentRule,
     LandDocumentRuleRequirement,
@@ -8,9 +9,11 @@ from backend.db.models.rules_engine import (
 )
 
 __all__ = [
+    "ConsentRecord",
     "GapAssessment",
     "GapAssessmentItem",
     "Household",
+    "LabourDeclaration",
     "LandDocumentRule",
     "LandDocumentRuleRequirement",
     "LandOwnershipAssessment",

@@ -1,10 +1,12 @@
 import uuid
+from datetime import UTC, datetime
 
 import pytest
 from sqlalchemy.exc import IntegrityError
 
 from backend.db.models.gap_assessment import GapAssessment, GapAssessmentItem
 from backend.db.models.household import Household
+from backend.db.models.labour_declaration import ConsentRecord, LabourDeclaration
 from backend.db.models.rules_engine import (
     LandDocumentRule,
     LandOwnershipAssessment,
@@ -17,6 +19,7 @@ from shared_types.enums import (
     LandOwnershipStatus,
     LandType,
     MalaysiaState,
+    SignatureMethod,
 )
 
 
@@ -151,6 +154,106 @@ def test_household_can_have_at_most_one_land_ownership_assessment(db_session) ->
             rule_id=rule.id,
             status=LandOwnershipStatus.CLEARED,
             assessed_by="Officer B",
+        )
+    )
+
+    with pytest.raises(IntegrityError):
+        db_session.commit()
+
+
+def test_labour_declaration_mill_id_must_match_household_mill_id(db_session) -> None:
+    household = _make_household(db_session, mill_id=uuid.uuid4())
+
+    mismatched_declaration = LabourDeclaration(
+        mill_id=uuid.uuid4(),  # deliberately not household.mill_id
+        household_id=household.id,
+        labour_arrangement_description="Family-run smallholding, no hired labour",
+        no_child_labour_confirmed=True,
+        has_land_dispute=False,
+        signature_method=SignatureMethod.THUMBPRINT,
+        collected_by="Officer Aiman",
+        collected_at=datetime.now(UTC),
+    )
+    db_session.add(mismatched_declaration)
+
+    with pytest.raises(IntegrityError):
+        db_session.commit()
+
+
+def test_household_can_have_at_most_one_labour_declaration(db_session) -> None:
+    mill_id = uuid.uuid4()
+    household = _make_household(db_session, mill_id=mill_id)
+    db_session.add(
+        LabourDeclaration(
+            mill_id=mill_id,
+            household_id=household.id,
+            labour_arrangement_description="Family-run smallholding, no hired labour",
+            no_child_labour_confirmed=True,
+            has_land_dispute=False,
+            signature_method=SignatureMethod.THUMBPRINT,
+            collected_by="Officer A",
+            collected_at=datetime.now(UTC),
+        )
+    )
+    db_session.commit()
+
+    db_session.add(
+        LabourDeclaration(
+            mill_id=mill_id,
+            household_id=household.id,
+            labour_arrangement_description="Family-run smallholding, no hired labour",
+            no_child_labour_confirmed=True,
+            has_land_dispute=False,
+            signature_method=SignatureMethod.THUMBPRINT,
+            collected_by="Officer B",
+            collected_at=datetime.now(UTC),
+        )
+    )
+
+    with pytest.raises(IntegrityError):
+        db_session.commit()
+
+
+def test_consent_record_mill_id_must_match_household_mill_id(db_session) -> None:
+    household = _make_household(db_session, mill_id=uuid.uuid4())
+
+    mismatched_consent = ConsentRecord(
+        mill_id=uuid.uuid4(),  # deliberately not household.mill_id
+        household_id=household.id,
+        mykad_last4="1234",
+        signature_method=SignatureMethod.SIGNATURE,
+        collected_by="Officer Aiman",
+        collected_at=datetime.now(UTC),
+    )
+    db_session.add(mismatched_consent)
+
+    with pytest.raises(IntegrityError):
+        db_session.commit()
+
+
+def test_household_can_have_at_most_one_consent_record(db_session) -> None:
+    mill_id = uuid.uuid4()
+    household = _make_household(db_session, mill_id=mill_id)
+    db_session.add(
+        ConsentRecord(
+            mill_id=mill_id,
+            household_id=household.id,
+            mykad_last4="1234",
+            signature_method=SignatureMethod.SIGNATURE,
+            collected_by="Officer A",
+            collected_at=datetime.now(UTC),
+        )
+    )
+    db_session.commit()
+
+    db_session.add(
+        ConsentRecord(
+            mill_id=mill_id,
+            household_id=household.id,
+            mykad_last4="5678",
+            signature_method=SignatureMethod.SIGNATURE,
+            collected_by="Officer B",
+            collected_at=datetime.now(UTC),
         )
     )
 

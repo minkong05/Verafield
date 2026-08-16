@@ -53,3 +53,8 @@ class LandOwnershipStatus(StrEnum):
     CLEARED = "cleared"
     FAILED = "failed"
     NEEDS_FOLLOW_UP = "needs_follow_up"
+
+
+class SignatureMethod(StrEnum):
+    SIGNATURE = "signature"
+    THUMBPRINT = "thumbprint"
