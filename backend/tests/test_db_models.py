@@ -1,5 +1,6 @@
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
+from decimal import Decimal
 
 import pytest
 from sqlalchemy.exc import IntegrityError
@@ -7,12 +8,15 @@ from sqlalchemy.exc import IntegrityError
 from backend.db.models.gap_assessment import GapAssessment, GapAssessmentItem
 from backend.db.models.household import Household
 from backend.db.models.labour_declaration import ConsentRecord, LabourDeclaration
+from backend.db.models.plot import Plot
 from backend.db.models.rules_engine import (
     LandDocumentRule,
     LandOwnershipAssessment,
     LandOwnershipDocument,
 )
+from backend.db.models.verification_engine import DeforestationCheck
 from shared_types.enums import (
+    DeforestationStatus,
     DocumentType,
     EvidenceCategory,
     GapStatus,
@@ -254,6 +258,115 @@ def test_household_can_have_at_most_one_consent_record(db_session) -> None:
             signature_method=SignatureMethod.SIGNATURE,
             collected_by="Officer B",
             collected_at=datetime.now(UTC),
+        )
+    )
+
+    with pytest.raises(IntegrityError):
+        db_session.commit()
+
+
+def _make_plot(db_session, mill_id: uuid.UUID, household_id: uuid.UUID) -> Plot:
+    plot = Plot(
+        mill_id=mill_id,
+        household_id=household_id,
+        polygon=[[117.0, 4.0], [117.1, 4.0], [117.1, 4.1]],
+        centroid_lat=Decimal("4.05"),
+        centroid_lon=Decimal("117.05"),
+        area_ha=Decimal("2.5"),
+        collected_by="Officer Aiman",
+        collected_at=datetime.now(UTC),
+    )
+    db_session.add(plot)
+    db_session.commit()
+    db_session.refresh(plot)
+    return plot
+
+
+def test_plot_mill_id_must_match_household_mill_id(db_session) -> None:
+    household = _make_household(db_session, mill_id=uuid.uuid4())
+
+    mismatched_plot = Plot(
+        mill_id=uuid.uuid4(),  # deliberately not household.mill_id
+        household_id=household.id,
+        polygon=[[117.0, 4.0], [117.1, 4.0], [117.1, 4.1]],
+        centroid_lat=Decimal("4.05"),
+        centroid_lon=Decimal("117.05"),
+        area_ha=Decimal("2.5"),
+        collected_by="Officer Aiman",
+        collected_at=datetime.now(UTC),
+    )
+    db_session.add(mismatched_plot)
+
+    with pytest.raises(IntegrityError):
+        db_session.commit()
+
+
+def test_household_can_have_more_than_one_plot(db_session) -> None:
+    mill_id = uuid.uuid4()
+    household = _make_household(db_session, mill_id=mill_id)
+    _make_plot(db_session, mill_id, household.id)
+
+    _make_plot(db_session, mill_id, household.id)  # does not raise
+
+
+def test_deforestation_check_mill_id_must_match_plot_mill_id(db_session) -> None:
+    mill_id = uuid.uuid4()
+    household = _make_household(db_session, mill_id=mill_id)
+    plot = _make_plot(db_session, mill_id, household.id)
+
+    mismatched_check = DeforestationCheck(
+        mill_id=uuid.uuid4(),  # deliberately not plot.mill_id
+        plot_id=plot.id,
+        forest_area_ha=Decimal("1.2"),
+        tree_height_m=Decimal("8"),
+        canopy_cover_pct=Decimal("40"),
+        predominantly_agricultural_or_urban=False,
+        pre_2020_imagery_date=date(2020, 6, 1),
+        post_2020_imagery_date=date(2026, 6, 1),
+        forest_loss_detected=False,
+        reviewed_by="GIS Specialist Tan",
+        status=DeforestationStatus.COMPLIANT,
+    )
+    db_session.add(mismatched_check)
+
+    with pytest.raises(IntegrityError):
+        db_session.commit()
+
+
+def test_plot_can_have_at_most_one_deforestation_check(db_session) -> None:
+    mill_id = uuid.uuid4()
+    household = _make_household(db_session, mill_id=mill_id)
+    plot = _make_plot(db_session, mill_id, household.id)
+    db_session.add(
+        DeforestationCheck(
+            mill_id=mill_id,
+            plot_id=plot.id,
+            forest_area_ha=Decimal("1.2"),
+            tree_height_m=Decimal("8"),
+            canopy_cover_pct=Decimal("40"),
+            predominantly_agricultural_or_urban=False,
+            pre_2020_imagery_date=date(2020, 6, 1),
+            post_2020_imagery_date=date(2026, 6, 1),
+            forest_loss_detected=False,
+            reviewed_by="GIS Specialist A",
+            status=DeforestationStatus.COMPLIANT,
+        )
+    )
+    db_session.commit()
+
+    db_session.add(
+        DeforestationCheck(
+            mill_id=mill_id,
+            plot_id=plot.id,
+            forest_area_ha=Decimal("1.2"),
+            tree_height_m=Decimal("8"),
+            canopy_cover_pct=Decimal("40"),
+            predominantly_agricultural_or_urban=False,
+            pre_2020_imagery_date=date(2020, 6, 1),
+            post_2020_imagery_date=date(2026, 6, 1),
+            forest_loss_detected=False,
+            reviewed_by="GIS Specialist B",
+            status=DeforestationStatus.COMPLIANT,
         )
     )
 

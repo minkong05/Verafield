@@ -11,10 +11,11 @@ Implemented:
 - **LandOwnershipAssessment / LandOwnershipDocument** — per-household record of the declared state/land type, the exact `LandDocumentRule` it was resolved against, the documents collected, and the computed pass/fail/needs-follow-up outcome (`rules_engine`). One per household for MVP, mirroring `GapAssessment`.
 - **LabourDeclaration** — per-household signed labour-arrangement, no-child-labour, and land-dispute declaration; `collected_at`/`collected_by` are client-supplied, not server-stamped, since capture happens on-site and offline and syncs later (`labour_declaration`). One per household for MVP.
 - **ConsentRecord** — dual-track PDPA/GDPR consent instrument: identity-minimised `mykad_last4`, data-processing consent, and a separate credit-referral opt-in line, all dated by one `collected_at` (`labour_declaration`). Stored as its own table, separate from other household data, given its sensitivity. One per household for MVP.
+- **Plot** — a household's land parcel: polygon (JSONB array of `[lon, lat]` pairs, WGS84 to ≥6 decimal places per Article 2(28)), centroid, `area_ha`, and client-supplied collection metadata (`verification_engine`). Deliberately **one household → many plots**, the one MVP entity so far without a `UniqueConstraint("household_id", ...)` — a smallholder can farm more than one non-contiguous parcel. Stored as plain `Numeric`/`JSONB` columns, not a PostGIS geometry type: no spatial queries are needed for MVP, only storage/round-trip toward the eventual GeoJSON evidence-pack output.
+- **DeforestationCheck** — per-plot forest three-threshold test (Article 2(4)) plus a before/after 31 Dec 2020 land-cover comparison, recorded by a GIS specialist and resolved to a computed compliant/non_compliant/needs_review status (`verification_engine`). One per plot for MVP, mirroring `GapAssessment`'s "one per X" pattern. `reviewed_at` is server-stamped (unlike `Plot.collected_at`), since the specialist's review happens off-site against imagery, not on-site against GPS/photo signals.
 
 Expected, not yet finalized:
-- **Plot** — geolocation/polygon (WGS84, ≥6 decimal places per Article 2(28)), area, linked household.
-- **VerificationResult** — per-signal pass/flag status from `services/verification_engine`, five-year retention (Articles 9(1), 4(3), 12(5)).
+- **VerificationResult** — per-signal pass/flag status from `services/verification_engine`'s Five-Point Field Check (Feature 05), five-year retention (Articles 9(1), 4(3), 12(5)).
 - **EvidencePack** — generated batch output from `services/evidence_pack`, plus renewal due date.
 - **Mill / Supplier link** — the join enforcing that a mill only ever queries its own suppliers.
 

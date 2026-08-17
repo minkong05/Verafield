@@ -1,4 +1,5 @@
 from shared_types.enums import (
+    DeforestationStatus,
     DocumentType,
     EvidenceCategory,
     GapStatus,
@@ -20,16 +21,21 @@ from shared_types.labour_declaration import (
     LabourDeclaration,
     LabourDeclarationCreate,
 )
+from shared_types.plot import Plot, PlotCreate
 from shared_types.rules_engine import (
     LandDocumentRule,
     LandDocumentRuleRequirement,
     LandOwnershipAssessment,
     LandOwnershipAssessmentCreate,
 )
+from shared_types.verification_engine import DeforestationCheck, DeforestationCheckCreate
 
 __all__ = [
     "ConsentRecord",
     "ConsentRecordCreate",
+    "DeforestationCheck",
+    "DeforestationCheckCreate",
+    "DeforestationStatus",
     "DocumentType",
     "EvidenceCategory",
     "GapAssessment",
@@ -48,5 +54,7 @@ __all__ = [
     "LandOwnershipStatus",
     "LandType",
     "MalaysiaState",
+    "Plot",
+    "PlotCreate",
     "SignatureMethod",
 ]

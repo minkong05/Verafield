@@ -14,3 +14,9 @@ Threshold values here are calibration data, not constants — tune against the f
 ## Interface
 
 Called by `backend/routes` on record sync. Reads land area from `backend/services/rules_engine`, MPOB licence/yield data from `backend/services/national_integration` (or manual entry until that ships). Writes clear/flag status via `backend/db`, which gates `backend/services/evidence_pack`.
+
+## Implementation status
+
+- **`Plot`** (Feature 04) — implemented. A household's land parcel: polygon/centroid geolocation, area, and client-supplied collection metadata. One household may have many plots — the one MVP entity so far without a "one per household" constraint.
+- **`DeforestationCheck`** (Feature 04) — implemented. One per plot: forest three-threshold test (Article 2(4)) plus a before/after 31 Dec 2020 land-cover comparison, recorded by a GIS specialist and resolved to a compliant/non_compliant/needs_review status by `service.compute_status`. MVP is manual review of every check, not an automated satellite-imagery integration.
+- Feature 05 (Five-Point Field Check, GPS/photo/area/MPOB/yield cross-checks and the anomaly review queue) is still README-only.

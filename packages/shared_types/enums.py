@@ -58,3 +58,9 @@ class LandOwnershipStatus(StrEnum):
 class SignatureMethod(StrEnum):
     SIGNATURE = "signature"
     THUMBPRINT = "thumbprint"
+
+
+class DeforestationStatus(StrEnum):
+    COMPLIANT = "compliant"
+    NON_COMPLIANT = "non_compliant"
+    NEEDS_REVIEW = "needs_review"

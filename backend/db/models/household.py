@@ -10,6 +10,7 @@ from backend.db.base import Base
 
 if TYPE_CHECKING:
     from backend.db.models.gap_assessment import GapAssessment
+    from backend.db.models.plot import Plot
 
 
 class Household(Base):
@@ -35,3 +36,4 @@ class Household(Base):
     gap_assessment: Mapped["GapAssessment | None"] = relationship(
         back_populates="household", uselist=False
     )
+    plots: Mapped[list["Plot"]] = relationship(back_populates="household")
