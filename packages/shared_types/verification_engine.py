@@ -2,9 +2,9 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from shared_types.enums import DeforestationStatus
+from shared_types.enums import DeforestationStatus, FieldVerificationStatus
 
 _BASELINE_CUTOFF = date(2020, 12, 31)
 
@@ -46,3 +46,59 @@ class DeforestationCheck(BaseModel):
     reviewed_by: str
     reviewed_at: datetime
     status: DeforestationStatus
+
+
+class FieldVerificationCheckCreate(BaseModel):
+    gnss_checkin_lat: Decimal = Field(ge=-90, le=90, decimal_places=6)
+    gnss_checkin_lon: Decimal = Field(ge=-180, le=180, decimal_places=6)
+    gnss_checkin_at: datetime
+    photo_lat: Decimal = Field(ge=-90, le=90, decimal_places=6)
+    photo_lon: Decimal = Field(ge=-180, le=180, decimal_places=6)
+    photo_taken_at: datetime
+    title_area_ha: Decimal = Field(gt=0, decimal_places=4)
+    recorded_by: str
+
+
+class FieldVerificationCheck(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    mill_id: uuid.UUID
+    plot_id: uuid.UUID
+    gnss_checkin_lat: Decimal
+    gnss_checkin_lon: Decimal
+    gnss_checkin_at: datetime
+    photo_lat: Decimal
+    photo_lon: Decimal
+    photo_taken_at: datetime
+    title_area_ha: Decimal
+    checkin_mismatch: bool
+    photo_mismatch: bool
+    area_mismatch: bool
+    status: FieldVerificationStatus
+    recorded_by: str
+    recorded_at: datetime
+
+
+class YieldLicenceCheckCreate(BaseModel):
+    mpob_licensed_area_ha: Decimal = Field(gt=0, decimal_places=4)
+    annual_output_kg: Decimal = Field(gt=0, decimal_places=2)
+    regional_yield_benchmark_kg_per_ha: Decimal = Field(gt=0, decimal_places=2)
+    recorded_by: str
+
+
+class YieldLicenceCheck(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    mill_id: uuid.UUID
+    household_id: uuid.UUID
+    mpob_licensed_area_ha: Decimal
+    declared_area_ha: Decimal
+    annual_output_kg: Decimal
+    regional_yield_benchmark_kg_per_ha: Decimal
+    licence_mismatch: bool
+    yield_mismatch: bool
+    status: FieldVerificationStatus
+    recorded_by: str
+    recorded_at: datetime

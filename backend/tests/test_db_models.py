@@ -14,11 +14,16 @@ from backend.db.models.rules_engine import (
     LandOwnershipAssessment,
     LandOwnershipDocument,
 )
-from backend.db.models.verification_engine import DeforestationCheck
+from backend.db.models.verification_engine import (
+    DeforestationCheck,
+    FieldVerificationCheck,
+    YieldLicenceCheck,
+)
 from shared_types.enums import (
     DeforestationStatus,
     DocumentType,
     EvidenceCategory,
+    FieldVerificationStatus,
     GapStatus,
     LandOwnershipStatus,
     LandType,
@@ -383,6 +388,101 @@ def test_land_document_rule_version_state_land_type_must_be_unique(db_session) -
         land_type=LandType.NATIVE_TITLE,
     )
     db_session.add(duplicate_rule)
+
+    with pytest.raises(IntegrityError):
+        db_session.commit()
+
+
+def _make_field_verification_check(
+    mill_id: uuid.UUID, plot_id: uuid.UUID, **overrides
+) -> FieldVerificationCheck:
+    defaults = {
+        "mill_id": mill_id,
+        "plot_id": plot_id,
+        "gnss_checkin_lat": Decimal("4.05"),
+        "gnss_checkin_lon": Decimal("117.05"),
+        "gnss_checkin_at": datetime.now(UTC),
+        "photo_lat": Decimal("4.05"),
+        "photo_lon": Decimal("117.05"),
+        "photo_taken_at": datetime.now(UTC),
+        "title_area_ha": Decimal("2.5"),
+        "checkin_mismatch": False,
+        "photo_mismatch": False,
+        "area_mismatch": False,
+        "status": FieldVerificationStatus.CLEARED,
+        "recorded_by": "Officer Aiman",
+    }
+    defaults.update(overrides)
+    return FieldVerificationCheck(**defaults)
+
+
+def test_field_verification_check_mill_id_must_match_plot_mill_id(db_session) -> None:
+    mill_id = uuid.uuid4()
+    household = _make_household(db_session, mill_id=mill_id)
+    plot = _make_plot(db_session, mill_id, household.id)
+
+    mismatched_check = _make_field_verification_check(
+        uuid.uuid4(),
+        plot.id,  # deliberately not plot.mill_id
+    )
+    db_session.add(mismatched_check)
+
+    with pytest.raises(IntegrityError):
+        db_session.commit()
+
+
+def test_plot_can_have_at_most_one_field_verification_check(db_session) -> None:
+    mill_id = uuid.uuid4()
+    household = _make_household(db_session, mill_id=mill_id)
+    plot = _make_plot(db_session, mill_id, household.id)
+    db_session.add(_make_field_verification_check(mill_id, plot.id, recorded_by="Officer A"))
+    db_session.commit()
+
+    db_session.add(_make_field_verification_check(mill_id, plot.id, recorded_by="Officer B"))
+
+    with pytest.raises(IntegrityError):
+        db_session.commit()
+
+
+def _make_yield_licence_check(
+    mill_id: uuid.UUID, household_id: uuid.UUID, **overrides
+) -> YieldLicenceCheck:
+    defaults = {
+        "mill_id": mill_id,
+        "household_id": household_id,
+        "mpob_licensed_area_ha": Decimal("3.0"),
+        "declared_area_ha": Decimal("2.5"),
+        "annual_output_kg": Decimal("10000"),
+        "regional_yield_benchmark_kg_per_ha": Decimal("4000"),
+        "licence_mismatch": False,
+        "yield_mismatch": False,
+        "status": FieldVerificationStatus.CLEARED,
+        "recorded_by": "Analyst Bakar",
+    }
+    defaults.update(overrides)
+    return YieldLicenceCheck(**defaults)
+
+
+def test_yield_licence_check_mill_id_must_match_household_mill_id(db_session) -> None:
+    household = _make_household(db_session, mill_id=uuid.uuid4())
+
+    mismatched_check = _make_yield_licence_check(
+        uuid.uuid4(),
+        household.id,  # deliberately not household.mill_id
+    )
+    db_session.add(mismatched_check)
+
+    with pytest.raises(IntegrityError):
+        db_session.commit()
+
+
+def test_household_can_have_at_most_one_yield_licence_check(db_session) -> None:
+    mill_id = uuid.uuid4()
+    household = _make_household(db_session, mill_id=mill_id)
+    db_session.add(_make_yield_licence_check(mill_id, household.id, recorded_by="Analyst A"))
+    db_session.commit()
+
+    db_session.add(_make_yield_licence_check(mill_id, household.id, recorded_by="Analyst B"))
 
     with pytest.raises(IntegrityError):
         db_session.commit()

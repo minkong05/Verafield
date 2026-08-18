@@ -8,11 +8,16 @@ from backend.db.models.rules_engine import (
     LandOwnershipAssessment,
     LandOwnershipDocument,
 )
-from backend.db.models.verification_engine import DeforestationCheck
+from backend.db.models.verification_engine import (
+    DeforestationCheck,
+    FieldVerificationCheck,
+    YieldLicenceCheck,
+)
 
 __all__ = [
     "ConsentRecord",
     "DeforestationCheck",
+    "FieldVerificationCheck",
     "GapAssessment",
     "GapAssessmentItem",
     "Household",
@@ -22,4 +27,5 @@ __all__ = [
     "LandOwnershipAssessment",
     "LandOwnershipDocument",
     "Plot",
+    "YieldLicenceCheck",
 ]

@@ -2,6 +2,7 @@ from shared_types.enums import (
     DeforestationStatus,
     DocumentType,
     EvidenceCategory,
+    FieldVerificationStatus,
     GapStatus,
     LandOwnershipStatus,
     LandType,
@@ -28,7 +29,14 @@ from shared_types.rules_engine import (
     LandOwnershipAssessment,
     LandOwnershipAssessmentCreate,
 )
-from shared_types.verification_engine import DeforestationCheck, DeforestationCheckCreate
+from shared_types.verification_engine import (
+    DeforestationCheck,
+    DeforestationCheckCreate,
+    FieldVerificationCheck,
+    FieldVerificationCheckCreate,
+    YieldLicenceCheck,
+    YieldLicenceCheckCreate,
+)
 
 __all__ = [
     "ConsentRecord",
@@ -38,6 +46,9 @@ __all__ = [
     "DeforestationStatus",
     "DocumentType",
     "EvidenceCategory",
+    "FieldVerificationCheck",
+    "FieldVerificationCheckCreate",
+    "FieldVerificationStatus",
     "GapAssessment",
     "GapAssessmentCreate",
     "GapAssessmentItem",
@@ -57,4 +68,6 @@ __all__ = [
     "Plot",
     "PlotCreate",
     "SignatureMethod",
+    "YieldLicenceCheck",
+    "YieldLicenceCheckCreate",
 ]

@@ -64,3 +64,8 @@ class DeforestationStatus(StrEnum):
     COMPLIANT = "compliant"
     NON_COMPLIANT = "non_compliant"
     NEEDS_REVIEW = "needs_review"
+
+
+class FieldVerificationStatus(StrEnum):
+    CLEARED = "cleared"
+    NEEDS_REVIEW = "needs_review"
