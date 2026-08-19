@@ -74,3 +74,9 @@ class FieldVerificationStatus(StrEnum):
 class NoMixingStatus(StrEnum):
     SINGLE_SOURCE = "single_source"
     MIXED_SOURCES = "mixed_sources"
+
+
+class MillDashboardStatus(StrEnum):
+    CLEARED = "cleared"
+    PENDING = "pending"
+    FROZEN = "frozen"

@@ -1,3 +1,4 @@
+from shared_types.dashboard import MillDashboardSupplier
 from shared_types.enums import (
     DeforestationStatus,
     DocumentType,
@@ -7,6 +8,7 @@ from shared_types.enums import (
     LandOwnershipStatus,
     LandType,
     MalaysiaState,
+    MillDashboardStatus,
     NoMixingStatus,
     SignatureMethod,
 )
@@ -90,6 +92,8 @@ __all__ = [
     "LandOwnershipStatus",
     "LandType",
     "MalaysiaState",
+    "MillDashboardStatus",
+    "MillDashboardSupplier",
     "NoMixingStatus",
     "Plot",
     "PlotCreate",

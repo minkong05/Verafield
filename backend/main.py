@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 
+from backend.routes.dashboard import router as dashboard_router
 from backend.routes.evidence_pack import router as evidence_pack_router
 from backend.routes.gap_assessment import router as gap_assessment_router
 from backend.routes.health import router as health_router
@@ -16,3 +17,4 @@ app.include_router(rules_engine_router)
 app.include_router(labour_declaration_router)
 app.include_router(verification_engine_router)
 app.include_router(evidence_pack_router)
+app.include_router(dashboard_router)
