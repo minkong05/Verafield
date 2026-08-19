@@ -69,3 +69,8 @@ class DeforestationStatus(StrEnum):
 class FieldVerificationStatus(StrEnum):
     CLEARED = "cleared"
     NEEDS_REVIEW = "needs_review"
+
+
+class NoMixingStatus(StrEnum):
+    SINGLE_SOURCE = "single_source"
+    MIXED_SOURCES = "mixed_sources"

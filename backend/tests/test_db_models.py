@@ -5,6 +5,7 @@ from decimal import Decimal
 import pytest
 from sqlalchemy.exc import IntegrityError
 
+from backend.db.models.evidence_pack import Batch, BatchPlot, EvidencePack
 from backend.db.models.gap_assessment import GapAssessment, GapAssessmentItem
 from backend.db.models.household import Household
 from backend.db.models.labour_declaration import ConsentRecord, LabourDeclaration
@@ -28,12 +29,19 @@ from shared_types.enums import (
     LandOwnershipStatus,
     LandType,
     MalaysiaState,
+    NoMixingStatus,
     SignatureMethod,
 )
 
 
 def _make_household(db_session, mill_id: uuid.UUID) -> Household:
-    household = Household(mill_id=mill_id, name="Ahmad bin Ismail")
+    household = Household(
+        mill_id=mill_id,
+        name="Ahmad bin Ismail",
+        postal_address="Lot 12, Jalan Kebun, 91000 Tawau, Sabah",
+        email="ahmad.ismail@example.com",
+        district="Tawau",
+    )
     db_session.add(household)
     db_session.commit()
     db_session.refresh(household)
@@ -483,6 +491,131 @@ def test_household_can_have_at_most_one_yield_licence_check(db_session) -> None:
     db_session.commit()
 
     db_session.add(_make_yield_licence_check(mill_id, household.id, recorded_by="Analyst B"))
+
+    with pytest.raises(IntegrityError):
+        db_session.commit()
+
+
+def _make_batch(db_session, mill_id: uuid.UUID, **overrides) -> Batch:
+    defaults = {
+        "mill_id": mill_id,
+        "product_description": "Crude palm oil",
+        "trade_name": "TAPAK CPO",
+        "hs_code": "1511.10",
+        "net_mass_kg": Decimal("20000.00"),
+        "recipient_name": "Sabah Oil Mills Sdn Bhd",
+        "recipient_postal_address": "Lot 5, Industrial Estate, 91000 Tawau, Sabah",
+        "recipient_email": "procurement@sabahoilmills.example",
+        "no_mixing_status": NoMixingStatus.SINGLE_SOURCE,
+        "created_by": "Analyst Bakar",
+    }
+    defaults.update(overrides)
+    batch = Batch(**defaults)
+    db_session.add(batch)
+    db_session.commit()
+    db_session.refresh(batch)
+    return batch
+
+
+def test_batch_plot_mill_id_must_match_batch_mill_id(db_session) -> None:
+    mill_id = uuid.uuid4()
+    household = _make_household(db_session, mill_id=mill_id)
+    plot = _make_plot(db_session, mill_id, household.id)
+    batch = _make_batch(db_session, mill_id)
+
+    mismatched_batch_plot = BatchPlot(
+        mill_id=uuid.uuid4(),  # deliberately not batch.mill_id
+        batch_id=batch.id,
+        plot_id=plot.id,
+        harvest_date=date(2026, 2, 1),
+    )
+    db_session.add(mismatched_batch_plot)
+
+    with pytest.raises(IntegrityError):
+        db_session.commit()
+
+
+def test_batch_plot_mill_id_must_match_plot_mill_id(db_session) -> None:
+    mill_id = uuid.uuid4()
+    household = _make_household(db_session, mill_id=mill_id)
+    plot = _make_plot(db_session, mill_id, household.id)
+    other_mill_id = uuid.uuid4()
+    batch = _make_batch(db_session, other_mill_id)
+
+    mismatched_batch_plot = BatchPlot(
+        mill_id=other_mill_id,
+        batch_id=batch.id,
+        plot_id=plot.id,  # deliberately belongs to a different mill
+        harvest_date=date(2026, 2, 1),
+    )
+    db_session.add(mismatched_batch_plot)
+
+    with pytest.raises(IntegrityError):
+        db_session.commit()
+
+
+def test_batch_plot_batch_and_plot_pair_must_be_unique(db_session) -> None:
+    mill_id = uuid.uuid4()
+    household = _make_household(db_session, mill_id=mill_id)
+    plot = _make_plot(db_session, mill_id, household.id)
+    batch = _make_batch(db_session, mill_id)
+    db_session.add(
+        BatchPlot(
+            mill_id=mill_id, batch_id=batch.id, plot_id=plot.id, harvest_date=date(2026, 2, 1)
+        )
+    )
+    db_session.commit()
+
+    db_session.add(
+        BatchPlot(
+            mill_id=mill_id, batch_id=batch.id, plot_id=plot.id, harvest_date=date(2026, 2, 2)
+        )
+    )
+
+    with pytest.raises(IntegrityError):
+        db_session.commit()
+
+
+def test_evidence_pack_mill_id_must_match_batch_mill_id(db_session) -> None:
+    mill_id = uuid.uuid4()
+    batch = _make_batch(db_session, mill_id)
+
+    mismatched_pack = EvidencePack(
+        mill_id=uuid.uuid4(),  # deliberately not batch.mill_id
+        batch_id=batch.id,
+        assembled_data={},
+        geojson={},
+        generated_by="Analyst Bakar",
+    )
+    db_session.add(mismatched_pack)
+
+    with pytest.raises(IntegrityError):
+        db_session.commit()
+
+
+def test_batch_can_have_at_most_one_evidence_pack(db_session) -> None:
+    mill_id = uuid.uuid4()
+    batch = _make_batch(db_session, mill_id)
+    db_session.add(
+        EvidencePack(
+            mill_id=mill_id,
+            batch_id=batch.id,
+            assembled_data={},
+            geojson={},
+            generated_by="Analyst A",
+        )
+    )
+    db_session.commit()
+
+    db_session.add(
+        EvidencePack(
+            mill_id=mill_id,
+            batch_id=batch.id,
+            assembled_data={},
+            geojson={},
+            generated_by="Analyst B",
+        )
+    )
 
     with pytest.raises(IntegrityError):
         db_session.commit()

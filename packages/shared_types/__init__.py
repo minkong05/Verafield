@@ -7,7 +7,21 @@ from shared_types.enums import (
     LandOwnershipStatus,
     LandType,
     MalaysiaState,
+    NoMixingStatus,
     SignatureMethod,
+)
+from shared_types.evidence_pack import (
+    Batch,
+    BatchCreate,
+    BatchPlot,
+    BatchPlotCreate,
+    EvidencePack,
+    EvidencePackAssembly,
+    EvidencePackCreate,
+    EvidencePackDeforestationEvidence,
+    EvidencePackLegalityEvidence,
+    EvidencePackPlotGeolocation,
+    EvidencePackSupplier,
 )
 from shared_types.gap_assessment import (
     GapAssessment,
@@ -39,6 +53,10 @@ from shared_types.verification_engine import (
 )
 
 __all__ = [
+    "Batch",
+    "BatchCreate",
+    "BatchPlot",
+    "BatchPlotCreate",
     "ConsentRecord",
     "ConsentRecordCreate",
     "DeforestationCheck",
@@ -46,6 +64,13 @@ __all__ = [
     "DeforestationStatus",
     "DocumentType",
     "EvidenceCategory",
+    "EvidencePack",
+    "EvidencePackAssembly",
+    "EvidencePackCreate",
+    "EvidencePackDeforestationEvidence",
+    "EvidencePackLegalityEvidence",
+    "EvidencePackPlotGeolocation",
+    "EvidencePackSupplier",
     "FieldVerificationCheck",
     "FieldVerificationCheckCreate",
     "FieldVerificationStatus",
@@ -65,6 +90,7 @@ __all__ = [
     "LandOwnershipStatus",
     "LandType",
     "MalaysiaState",
+    "NoMixingStatus",
     "Plot",
     "PlotCreate",
     "SignatureMethod",

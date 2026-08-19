@@ -6,6 +6,9 @@ from pydantic import BaseModel, ConfigDict
 
 class HouseholdBase(BaseModel):
     name: str
+    postal_address: str
+    email: str
+    district: str
 
 
 class HouseholdCreate(HouseholdBase):
@@ -18,3 +21,4 @@ class Household(HouseholdBase):
     id: uuid.UUID
     mill_id: uuid.UUID
     created_at: datetime
+    updated_at: datetime

@@ -3,7 +3,15 @@ from datetime import UTC, datetime, timedelta
 
 
 def _create_household(client, mill_id: uuid.UUID, name: str = "Ahmad bin Ismail") -> str:
-    response = client.post(f"/mills/{mill_id}/households", json={"name": name})
+    response = client.post(
+        f"/mills/{mill_id}/households",
+        json={
+            "name": name,
+            "postal_address": "Lot 12, Jalan Kebun, 91000 Tawau, Sabah",
+            "email": "ahmad.ismail@example.com",
+            "district": "Tawau",
+        },
+    )
     assert response.status_code == 201
     return response.json()["id"]
 

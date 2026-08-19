@@ -37,7 +37,13 @@ def validate_checklist_items(items: list[GapAssessmentItemCreate]) -> None:
 
 
 def create_household(db: Session, mill_id: uuid.UUID, payload: HouseholdCreate) -> Household:
-    household = Household(mill_id=mill_id, name=payload.name)
+    household = Household(
+        mill_id=mill_id,
+        name=payload.name,
+        postal_address=payload.postal_address,
+        email=payload.email,
+        district=payload.district,
+    )
     db.add(household)
     db.commit()
     db.refresh(household)

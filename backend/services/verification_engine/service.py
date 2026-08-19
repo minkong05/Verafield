@@ -7,13 +7,14 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from backend.db.models.plot import Plot
+from backend.db.models.rules_engine import LandOwnershipAssessment
 from backend.db.models.verification_engine import (
     DeforestationCheck,
     FieldVerificationCheck,
     YieldLicenceCheck,
 )
 from backend.services.gap_assessment.service import get_household
-from shared_types.enums import DeforestationStatus, FieldVerificationStatus
+from shared_types.enums import DeforestationStatus, FieldVerificationStatus, LandOwnershipStatus
 from shared_types.plot import PlotCreate
 from shared_types.verification_engine import (
     DeforestationCheckCreate,
@@ -102,6 +103,70 @@ def get_plot(db: Session, mill_id: uuid.UUID, household_id: uuid.UUID, plot_id: 
     if plot is None:
         raise PlotNotFoundError(f"plot {plot_id} not found for household {household_id}")
     return plot
+
+
+def get_plot_by_id(db: Session, mill_id: uuid.UUID, plot_id: uuid.UUID) -> Plot:
+    """Resolves a plot by id alone, without requiring the caller to already
+    know its household_id — needed by evidence_pack.service.create_batch,
+    whose BatchCreate payload lists plot_ids directly (a batch spans multiple
+    households, so unlike every other plot route there is no single
+    household_id in the URL to scope the lookup through)."""
+    plot = db.query(Plot).filter(Plot.id == plot_id, Plot.mill_id == mill_id).one_or_none()
+    if plot is None:
+        raise PlotNotFoundError(f"plot {plot_id} not found for mill {mill_id}")
+    return plot
+
+
+def household_is_cleared(db: Session, mill_id: uuid.UUID, household_id: uuid.UUID) -> bool:
+    """The Feature 06 generation gate. True only if every plot belonging to
+    the household has a COMPLIANT DeforestationCheck and a CLEARED
+    FieldVerificationCheck, the household itself has a CLEARED
+    YieldLicenceCheck, and a CLEARED LandOwnershipAssessment — the literal
+    source of the assembled pack's Art 9(1)(h) legality-evidence field. A
+    plot with no check row at all counts as unresolved, not cleared by
+    omission."""
+    plots = db.query(Plot).filter(Plot.household_id == household_id, Plot.mill_id == mill_id).all()
+    for plot in plots:
+        deforestation_check = (
+            db.query(DeforestationCheck)
+            .filter(DeforestationCheck.plot_id == plot.id, DeforestationCheck.mill_id == mill_id)
+            .one_or_none()
+        )
+        if (
+            deforestation_check is None
+            or deforestation_check.status != DeforestationStatus.COMPLIANT
+        ):
+            return False
+
+        field_check = (
+            db.query(FieldVerificationCheck)
+            .filter(
+                FieldVerificationCheck.plot_id == plot.id, FieldVerificationCheck.mill_id == mill_id
+            )
+            .one_or_none()
+        )
+        if field_check is None or field_check.status != FieldVerificationStatus.CLEARED:
+            return False
+
+    yield_check = (
+        db.query(YieldLicenceCheck)
+        .filter(
+            YieldLicenceCheck.household_id == household_id, YieldLicenceCheck.mill_id == mill_id
+        )
+        .one_or_none()
+    )
+    if yield_check is None or yield_check.status != FieldVerificationStatus.CLEARED:
+        return False
+
+    land_ownership = (
+        db.query(LandOwnershipAssessment)
+        .filter(
+            LandOwnershipAssessment.household_id == household_id,
+            LandOwnershipAssessment.mill_id == mill_id,
+        )
+        .one_or_none()
+    )
+    return land_ownership is not None and land_ownership.status == LandOwnershipStatus.CLEARED
 
 
 def compute_status(

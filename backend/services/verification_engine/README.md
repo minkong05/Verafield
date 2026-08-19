@@ -15,6 +15,8 @@ Threshold values here are calibration data, not constants — tune against the f
 
 Called by `backend/routes` on record sync. Reads land area from `backend/services/rules_engine`, MPOB licence/yield data from `backend/services/national_integration` (or manual entry until that ships). Writes clear/flag status via `backend/db`, which gates `backend/services/evidence_pack`.
 
+`service.household_is_cleared` (Feature 06's generation gate) and `service.get_plot_by_id` were added to support `evidence_pack`, which imports both directly — the same cross-service-import direction this module already uses for `gap_assessment.service.get_household`. `household_is_cleared` also reads `LandOwnershipAssessment` (Feature 02, `rules_engine`'s model), a new cross-domain dependency: it's the only source of the assembled pack's Art 9(1)(h) legality-evidence field, so a household with no cleared land-ownership assessment is treated as unresolved too, not just one with a Feature 05 flag.
+
 ## Implementation status
 
 - **`Plot`** (Feature 04) — implemented. A household's land parcel: polygon/centroid geolocation, area, and client-supplied collection metadata. One household may have many plots — the one MVP entity so far without a "one per household" constraint.
