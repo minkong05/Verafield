@@ -38,7 +38,9 @@ from shared_types.labour_declaration import (
     LabourDeclaration,
     LabourDeclarationCreate,
 )
+from shared_types.national_integration import NationalSystemsLookup, NationalSystemsLookupCreate
 from shared_types.plot import Plot, PlotCreate
+from shared_types.renewal import RenewalStatus
 from shared_types.rules_engine import (
     LandDocumentRule,
     LandDocumentRuleRequirement,
@@ -94,9 +96,12 @@ __all__ = [
     "MalaysiaState",
     "MillDashboardStatus",
     "MillDashboardSupplier",
+    "NationalSystemsLookup",
+    "NationalSystemsLookupCreate",
     "NoMixingStatus",
     "Plot",
     "PlotCreate",
+    "RenewalStatus",
     "SignatureMethod",
     "YieldLicenceCheck",
     "YieldLicenceCheckCreate",

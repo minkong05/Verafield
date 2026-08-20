@@ -1,5 +1,5 @@
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 from backend.db.models.evidence_pack import Batch, BatchPlot, EvidencePack
@@ -120,7 +120,9 @@ def _make_batch_plot(
     return batch_plot
 
 
-def _make_evidence_pack(db_session, mill_id: uuid.UUID, batch_id: uuid.UUID) -> EvidencePack:
+def _make_evidence_pack(
+    db_session, mill_id: uuid.UUID, batch_id: uuid.UUID, generated_at: datetime | None = None
+) -> EvidencePack:
     pack = EvidencePack(
         mill_id=mill_id,
         batch_id=batch_id,
@@ -128,17 +130,23 @@ def _make_evidence_pack(db_session, mill_id: uuid.UUID, batch_id: uuid.UUID) -> 
         geojson={"type": "FeatureCollection", "features": []},
         generated_by="Analyst Bakar",
     )
+    if generated_at is not None:
+        pack.generated_at = generated_at
     db_session.add(pack)
     db_session.commit()
     return pack
 
 
 def _give_household_an_evidence_pack(
-    db_session, mill_id: uuid.UUID, household_id: uuid.UUID, plot_id: uuid.UUID
+    db_session,
+    mill_id: uuid.UUID,
+    household_id: uuid.UUID,
+    plot_id: uuid.UUID,
+    generated_at: datetime | None = None,
 ) -> None:
     batch = _make_batch(db_session, mill_id)
     _make_batch_plot(db_session, mill_id, batch.id, plot_id)
-    _make_evidence_pack(db_session, mill_id, batch.id)
+    _make_evidence_pack(db_session, mill_id, batch.id, generated_at=generated_at)
 
 
 # --- compute_household_status ------------------------------------------
@@ -201,6 +209,38 @@ def test_compute_household_status_frozen_takes_priority_over_cleared(db_session)
     )
 
     assert compute_household_status(db_session, mill_id, household.id) == MillDashboardStatus.FROZEN
+
+
+def test_compute_household_status_is_frozen_when_renewal_has_lapsed(db_session) -> None:
+    mill_id = uuid.uuid4()
+    household = _make_household(db_session, mill_id)
+    plot = _make_plot(db_session, mill_id, household.id)
+    _give_household_an_evidence_pack(
+        db_session,
+        mill_id,
+        household.id,
+        plot.id,
+        generated_at=datetime.now(UTC) - timedelta(days=400),
+    )
+
+    assert compute_household_status(db_session, mill_id, household.id) == MillDashboardStatus.FROZEN
+
+
+def test_compute_household_status_is_cleared_just_before_renewal_due_date(db_session) -> None:
+    mill_id = uuid.uuid4()
+    household = _make_household(db_session, mill_id)
+    plot = _make_plot(db_session, mill_id, household.id)
+    _give_household_an_evidence_pack(
+        db_session,
+        mill_id,
+        household.id,
+        plot.id,
+        generated_at=datetime.now(UTC) - timedelta(days=300),
+    )
+
+    assert (
+        compute_household_status(db_session, mill_id, household.id) == MillDashboardStatus.CLEARED
+    )
 
 
 # --- list_mill_dashboard -------------------------------------------------

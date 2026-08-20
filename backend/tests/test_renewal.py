@@ -2,11 +2,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 
 from backend.db.models.evidence_pack import EvidencePack
-from shared_types.enums import EvidenceCategory, GapStatus
-
-FULL_CHECKLIST = [
-    {"category": category.value, "status": GapStatus.PRESENT.value} for category in EvidenceCategory
-]
+from backend.services.renewal.service import add_one_year
 
 
 def _create_household(client, mill_id: uuid.UUID, name: str = "Ahmad bin Ismail") -> str:
@@ -151,169 +147,134 @@ def _create_batch(client, mill_id: uuid.UUID, plots: list[dict]) -> str:
     return response.json()["id"]
 
 
-def _cleared_household_and_plot(client, mill_id: uuid.UUID) -> tuple[str, str]:
+def _create_evidence_pack(client, mill_id: uuid.UUID, batch_id: str) -> str:
+    response = client.post(
+        f"/mills/{mill_id}/batches/{batch_id}/evidence-pack",
+        json={"generated_by": "Analyst Bakar"},
+    )
+    assert response.status_code == 201
+    return response.json()["id"]
+
+
+def _household_with_evidence_pack(client, mill_id: uuid.UUID) -> str:
     household_id = _create_household(client, mill_id)
     plot_id = _create_plot(client, mill_id, household_id)
     _clear_household(client, mill_id, household_id, plot_id)
-    return household_id, plot_id
-
-
-def _dashboard_entry(client, mill_id: uuid.UUID, household_id: str) -> dict:
-    response = client.get(f"/mills/{mill_id}/dashboard")
-    assert response.status_code == 200
-    [entry] = [entry for entry in response.json() if entry["household_id"] == household_id]
-    return entry
-
-
-# --- Pending --------------------------------------------------------------
-
-
-def test_household_with_no_records_is_pending(client) -> None:
-    mill_id = uuid.uuid4()
-    household_id = _create_household(client, mill_id)
-
-    entry = _dashboard_entry(client, mill_id, household_id)
-
-    assert entry["status"] == "pending"
-
-
-def test_household_with_gap_assessment_only_is_pending(client) -> None:
-    mill_id = uuid.uuid4()
-    household_id = _create_household(client, mill_id)
-    assert (
-        client.post(
-            f"/mills/{mill_id}/households/{household_id}/gap-assessment",
-            json={"assessed_by": "Officer Aiman", "items": FULL_CHECKLIST},
-        ).status_code
-        == 201
-    )
-
-    entry = _dashboard_entry(client, mill_id, household_id)
-
-    assert entry["status"] == "pending"
-
-
-# --- Cleared ----------------------------------------------------------------
-
-
-def test_household_with_evidence_pack_is_cleared(client) -> None:
-    mill_id = uuid.uuid4()
-    household_id, plot_id = _cleared_household_and_plot(client, mill_id)
     batch_id = _create_batch(client, mill_id, [{"plot_id": plot_id, "harvest_date": "2026-02-01"}])
-    assert (
-        client.post(
-            f"/mills/{mill_id}/batches/{batch_id}/evidence-pack",
-            json={"generated_by": "Analyst Bakar"},
-        ).status_code
-        == 201
-    )
-
-    entry = _dashboard_entry(client, mill_id, household_id)
-
-    assert entry["status"] == "cleared"
+    _create_evidence_pack(client, mill_id, batch_id)
+    return household_id
 
 
-def test_household_without_evidence_pack_is_not_cleared(client) -> None:
-    mill_id = uuid.uuid4()
-    # Fully cleared (household_is_cleared would be True), but no batch/pack
-    # ever generated — Feature 07's "cleared" is not household_is_cleared.
-    household_id, _ = _cleared_household_and_plot(client, mill_id)
-
-    entry = _dashboard_entry(client, mill_id, household_id)
-
-    assert entry["status"] == "pending"
-
-
-# --- Frozen -----------------------------------------------------------------
-
-
-def test_household_with_needs_review_field_verification_check_is_frozen(client) -> None:
-    mill_id = uuid.uuid4()
-    household_id = _create_household(client, mill_id)
-    plot_id = _create_plot(client, mill_id, household_id)
-    field_check = client.post(
-        f"/mills/{mill_id}/households/{household_id}/plots/{plot_id}/field-verification-check",
-        json=_field_verification_check_payload(gnss_checkin_lat="4.060000"),
-    )
-    assert field_check.status_code == 201
-    assert field_check.json()["status"] == "needs_review"
-
-    entry = _dashboard_entry(client, mill_id, household_id)
-
-    assert entry["status"] == "frozen"
-
-
-def test_household_with_needs_review_yield_licence_check_is_frozen(client) -> None:
-    mill_id = uuid.uuid4()
-    household_id = _create_household(client, mill_id)
-    _create_plot(client, mill_id, household_id)
-    yield_check = client.post(
-        f"/mills/{mill_id}/households/{household_id}/yield-licence-check",
-        json=_yield_licence_check_payload(annual_output_kg="50000.00"),
-    )
-    assert yield_check.status_code == 201
-    assert yield_check.json()["status"] == "needs_review"
-
-    entry = _dashboard_entry(client, mill_id, household_id)
-
-    assert entry["status"] == "frozen"
-
-
-def test_household_with_lapsed_evidence_pack_is_frozen(client, db_session) -> None:
-    mill_id = uuid.uuid4()
-    household_id, plot_id = _cleared_household_and_plot(client, mill_id)
-    batch_id = _create_batch(client, mill_id, [{"plot_id": plot_id, "harvest_date": "2026-02-01"}])
-    assert (
-        client.post(
-            f"/mills/{mill_id}/batches/{batch_id}/evidence-pack",
-            json={"generated_by": "Analyst Bakar"},
-        ).status_code
-        == 201
-    )
+def _age_household_evidence_pack(db_session, mill_id: uuid.UUID, generated_at: datetime) -> None:
     pack = db_session.query(EvidencePack).filter(EvidencePack.mill_id == mill_id).one()
-    pack.generated_at = datetime.now(UTC) - timedelta(days=400)
+    pack.generated_at = generated_at
     db_session.commit()
 
-    entry = _dashboard_entry(client, mill_id, household_id)
 
-    assert entry["status"] == "frozen"
-
-
-# --- Multi-tenant isolation ---------------------------------------------
+# --- single-household route -------------------------------------------------
 
 
-def test_dashboard_only_shows_own_mills_households(client) -> None:
+def test_household_with_no_records_has_null_renewal_fields_and_not_lapsed(client) -> None:
+    mill_id = uuid.uuid4()
+    household_id = _create_household(client, mill_id)
+
+    response = client.get(f"/mills/{mill_id}/households/{household_id}/renewal-status")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["last_evidence_pack_generated_at"] is None
+    assert body["renewal_due_at"] is None
+    assert body["lapsed"] is False
+
+
+def test_household_with_recent_evidence_pack_is_not_lapsed(client) -> None:
+    mill_id = uuid.uuid4()
+    household_id = _household_with_evidence_pack(client, mill_id)
+
+    response = client.get(f"/mills/{mill_id}/households/{household_id}/renewal-status")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["last_evidence_pack_generated_at"] is not None
+    assert body["renewal_due_at"] is not None
+    assert body["lapsed"] is False
+
+
+def test_household_with_evidence_pack_past_due_date_is_lapsed(client, db_session) -> None:
+    mill_id = uuid.uuid4()
+    household_id = _household_with_evidence_pack(client, mill_id)
+    aged = datetime.now(UTC) - timedelta(days=400)
+    _age_household_evidence_pack(db_session, mill_id, aged)
+
+    response = client.get(f"/mills/{mill_id}/households/{household_id}/renewal-status")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["lapsed"] is True
+    due_at = datetime.fromisoformat(body["renewal_due_at"].replace("Z", "+00:00"))
+    assert due_at == add_one_year(aged)
+
+
+def test_read_household_renewal_status_404s_for_unknown_household(client) -> None:
+    mill_id = uuid.uuid4()
+
+    response = client.get(f"/mills/{mill_id}/households/{uuid.uuid4()}/renewal-status")
+
+    assert response.status_code == 404
+
+
+def test_read_household_renewal_status_404s_for_household_in_other_mill(client) -> None:
+    mill_a = uuid.uuid4()
+    mill_b = uuid.uuid4()
+    household_id = _create_household(client, mill_a)
+
+    response = client.get(f"/mills/{mill_b}/households/{household_id}/renewal-status")
+
+    assert response.status_code == 404
+
+
+# --- mill-wide list route ----------------------------------------------------
+
+
+def test_mill_renewal_status_only_shows_own_mills_households(client) -> None:
     mill_a = uuid.uuid4()
     mill_b = uuid.uuid4()
     household_a = _create_household(client, mill_a)
     _create_household(client, mill_b)
 
-    response = client.get(f"/mills/{mill_a}/dashboard")
+    response = client.get(f"/mills/{mill_a}/renewal-status")
 
     assert response.status_code == 200
     household_ids = {entry["household_id"] for entry in response.json()}
     assert household_ids == {household_a}
 
 
-def test_empty_mill_returns_empty_list(client) -> None:
+def test_empty_mill_renewal_status_returns_empty_list(client) -> None:
     mill_id = uuid.uuid4()
 
-    response = client.get(f"/mills/{mill_id}/dashboard")
+    response = client.get(f"/mills/{mill_id}/renewal-status")
 
     assert response.status_code == 200
     assert response.json() == []
 
 
-# --- Response shape -------------------------------------------------------
-
-
-def test_dashboard_entry_shape(client) -> None:
+def test_renewal_status_entry_shape(client) -> None:
     mill_id = uuid.uuid4()
     household_id = _create_household(client, mill_id, name="Siti binti Yusof")
 
-    entry = _dashboard_entry(client, mill_id, household_id)
+    response = client.get(f"/mills/{mill_id}/households/{household_id}/renewal-status")
 
-    assert entry.keys() == {"household_id", "mill_id", "name", "district", "status"}
-    assert entry["mill_id"] == str(mill_id)
-    assert entry["name"] == "Siti binti Yusof"
-    assert entry["district"] == "Tawau"
+    assert response.status_code == 200
+    body = response.json()
+    assert body.keys() == {
+        "household_id",
+        "mill_id",
+        "name",
+        "district",
+        "last_evidence_pack_generated_at",
+        "renewal_due_at",
+        "lapsed",
+    }
+    assert body["mill_id"] == str(mill_id)
+    assert body["name"] == "Siti binti Yusof"
+    assert body["district"] == "Tawau"

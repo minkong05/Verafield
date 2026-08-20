@@ -16,7 +16,7 @@ Implemented:
 
 Expected, not yet finalized:
 - **VerificationResult** — per-signal pass/flag status from `services/verification_engine`'s Five-Point Field Check (Feature 05), five-year retention (Articles 9(1), 4(3), 12(5)).
-- **EvidencePack** — generated batch output from `services/evidence_pack`, plus renewal due date.
+- **EvidencePack** — generated batch output from `services/evidence_pack`.
 - **Mill / Supplier link** — the join enforcing that a mill only ever queries its own suppliers.
 
 ## Hard rule

@@ -6,6 +6,7 @@ from backend.db.models.evidence_pack import BatchPlot, EvidencePack
 from backend.db.models.household import Household
 from backend.db.models.plot import Plot
 from backend.db.models.verification_engine import FieldVerificationCheck, YieldLicenceCheck
+from backend.services.renewal.service import household_renewal_is_lapsed
 from shared_types.enums import FieldVerificationStatus, MillDashboardStatus
 
 __all__ = ["compute_household_status", "list_mill_dashboard"]
@@ -68,13 +69,16 @@ def compute_household_status(
     db: Session, mill_id: uuid.UUID, household_id: uuid.UUID
 ) -> MillDashboardStatus:
     """frozen takes priority over cleared: a household whose evidence pack
-    predates a newly-raised Feature 05 flag must still show frozen, not a
-    stale cleared. Deliberately does not call
-    verification_engine.service.household_is_cleared, which answers a
-    different, forward-looking question (see dashboard/README.md)."""
+    predates a newly-raised Feature 05 flag, or whose renewal has lapsed
+    (Feature 09), must still show frozen, not a stale cleared. Deliberately
+    does not call verification_engine.service.household_is_cleared, which
+    answers a different, forward-looking question (see dashboard/README.md)."""
     if _household_has_unresolved_signal(db, mill_id, household_id):
         return MillDashboardStatus.FROZEN
-    if _household_has_evidence_pack(db, mill_id, household_id):
+    has_evidence_pack = _household_has_evidence_pack(db, mill_id, household_id)
+    if has_evidence_pack and household_renewal_is_lapsed(db, mill_id, household_id):
+        return MillDashboardStatus.FROZEN
+    if has_evidence_pack:
         return MillDashboardStatus.CLEARED
     return MillDashboardStatus.PENDING
 
