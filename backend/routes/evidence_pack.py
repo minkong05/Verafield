@@ -5,9 +5,9 @@ from sqlalchemy.orm import Session
 
 from backend.db.session import get_db
 from backend.services.evidence_pack import service
-from shared_types import Batch as BatchSchema
-from shared_types import BatchCreate, EvidencePackCreate
-from shared_types import EvidencePack as EvidencePackSchema
+from packages.shared_types import Batch as BatchSchema
+from packages.shared_types import BatchCreate, EvidencePackCreate
+from packages.shared_types import EvidencePack as EvidencePackSchema
 
 router = APIRouter(prefix="/mills/{mill_id}/batches", tags=["evidence-pack"])
 

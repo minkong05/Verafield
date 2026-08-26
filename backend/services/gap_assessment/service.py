@@ -4,9 +4,9 @@ from sqlalchemy.orm import Session
 
 from backend.db.models.gap_assessment import GapAssessment, GapAssessmentItem
 from backend.db.models.household import Household
-from shared_types.enums import EvidenceCategory
-from shared_types.gap_assessment import GapAssessmentCreate, GapAssessmentItemCreate
-from shared_types.household import HouseholdCreate
+from packages.shared_types.enums import EvidenceCategory
+from packages.shared_types.gap_assessment import GapAssessmentCreate, GapAssessmentItemCreate
+from packages.shared_types.household import HouseholdCreate
 
 
 class HouseholdNotFoundError(Exception):
