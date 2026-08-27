@@ -8,8 +8,8 @@ from backend.db.models.rules_engine import (
     LandOwnershipDocument,
 )
 from backend.services.gap_assessment.service import get_household
-from shared_types.enums import DocumentType, LandOwnershipStatus, LandType, MalaysiaState
-from shared_types.rules_engine import LandOwnershipAssessmentCreate
+from packages.shared_types.enums import DocumentType, LandOwnershipStatus, LandType, MalaysiaState
+from packages.shared_types.rules_engine import LandOwnershipAssessmentCreate
 
 CURRENT_RULE_VERSION = "sabah-sarawak-v1"
 

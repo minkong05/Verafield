@@ -6,10 +6,10 @@ from sqlalchemy.orm import Session
 from backend.db.session import get_db
 from backend.services.gap_assessment.service import HouseholdNotFoundError
 from backend.services.rules_engine import service
-from shared_types import LandDocumentRule as LandDocumentRuleSchema
-from shared_types import LandOwnershipAssessment as LandOwnershipAssessmentSchema
-from shared_types import LandOwnershipAssessmentCreate
-from shared_types.enums import LandType, MalaysiaState
+from packages.shared_types import LandDocumentRule as LandDocumentRuleSchema
+from packages.shared_types import LandOwnershipAssessment as LandOwnershipAssessmentSchema
+from packages.shared_types import LandOwnershipAssessmentCreate
+from packages.shared_types.enums import LandType, MalaysiaState
 
 router = APIRouter(tags=["rules-engine"])
 
