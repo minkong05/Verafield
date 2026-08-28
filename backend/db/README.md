@@ -2,14 +2,21 @@
 
 Schema, migrations, and the multi-tenant isolation rules that keep one mill from ever seeing another mill's supplier data.
 
-## Core entities (expected, not yet finalized)
+## Core entities
 
-- **Household** — smallholder profile, land type/state (input to `rules_engine`), last-four-digits-only MyKad per tech.md §6.4 identity minimisation.
-- **Plot** — geolocation/polygon (WGS84, ≥6 decimal places per Article 2(28)), area, linked household.
-- **Document** — land title/lease/tenancy evidence, photo, rule version it was assessed under.
-- **Consent** — dual-track PDPA/GDPR consent record ([`03-labour-rights-declaration`](../../docs/roadmap/03-labour-rights-declaration.md)), stored separately from other household data given its sensitivity.
-- **VerificationResult** — per-signal pass/flag status from `services/verification_engine`, five-year retention (Articles 9(1), 4(3), 12(5)).
-- **EvidencePack** — generated batch output from `services/evidence_pack`, plus renewal due date.
+Implemented:
+- **Household** — smallholder profile (`gap_assessment`). Land type/state live on `LandOwnershipAssessment`, not `Household` itself — see below.
+- **GapAssessment / GapAssessmentItem** — per-household checklist status across the six EUDR evidence categories (`gap_assessment`).
+- **LandDocumentRule / LandDocumentRuleRequirement** — the versioned Land Document Playbook: global reference data (no `mill_id`) keyed on `(rule_version, state, land_type)`, returning the required documents and any hard-fail conditions (`rules_engine`).
+- **LandOwnershipAssessment / LandOwnershipDocument** — per-household record of the declared state/land type, the exact `LandDocumentRule` it was resolved against, the documents collected, and the computed pass/fail/needs-follow-up outcome (`rules_engine`). One per household for MVP, mirroring `GapAssessment`.
+- **LabourDeclaration** — per-household signed labour-arrangement, no-child-labour, and land-dispute declaration; `collected_at`/`collected_by` are client-supplied, not server-stamped, since capture happens on-site and offline and syncs later (`labour_declaration`). One per household for MVP.
+- **ConsentRecord** — dual-track PDPA/GDPR consent instrument: identity-minimised `mykad_last4`, data-processing consent, and a separate credit-referral opt-in line, all dated by one `collected_at` (`labour_declaration`). Stored as its own table, separate from other household data, given its sensitivity. One per household for MVP.
+- **Plot** — a household's land parcel: polygon (JSONB array of `[lon, lat]` pairs, WGS84 to ≥6 decimal places per Article 2(28)), centroid, `area_ha`, and client-supplied collection metadata (`verification_engine`). Deliberately **one household → many plots**, the one MVP entity so far without a `UniqueConstraint("household_id", ...)` — a smallholder can farm more than one non-contiguous parcel. Stored as plain `Numeric`/`JSONB` columns, not a PostGIS geometry type: no spatial queries are needed for MVP, only storage/round-trip toward the eventual GeoJSON evidence-pack output.
+- **DeforestationCheck** — per-plot forest three-threshold test (Article 2(4)) plus a before/after 31 Dec 2020 land-cover comparison, recorded by a GIS specialist and resolved to a computed compliant/non_compliant/needs_review status (`verification_engine`). One per plot for MVP, mirroring `GapAssessment`'s "one per X" pattern. `reviewed_at` is server-stamped (unlike `Plot.collected_at`), since the specialist's review happens off-site against imagery, not on-site against GPS/photo signals.
+
+Expected, not yet finalized:
+- **VerificationResult** — per-signal pass/flag status from `services/verification_engine`'s Five-Point Field Check (Feature 05), five-year retention (Articles 9(1), 4(3), 12(5)).
+- **EvidencePack** — generated batch output from `services/evidence_pack`.
 - **Mill / Supplier link** — the join enforcing that a mill only ever queries its own suppliers.
 
 ## Hard rule

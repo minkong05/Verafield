@@ -73,6 +73,28 @@ docker compose exec db psql -U tapak -d tapak  # psql prompt inside the running 
 - **Backend container won't start after a dependency change** — you need `--build`; `docker compose up -d` alone reuses the existing image.
 - **Stack is in a weird state** — `docker compose down -v` then `docker compose up -d --build` for a clean slate.
 
+## Working with Alembic
+
+Migrations live under `backend/db/migrations/`, configured by `backend/alembic.ini` (kept inside `backend/`, not the repo root, because the Docker build context only copies `backend/` and `packages/` — see `backend/db/README.md`). Always pass `-c backend/alembic.ini` and run from the repo root so the config's relative `script_location` resolves correctly.
+
+```bash
+# generate a migration from model changes (needs a reachable Postgres — see below)
+alembic -c backend/alembic.ini revision --autogenerate -m "describe the change"
+
+# apply migrations — locally, against docker compose's db service:
+docker compose up -d db
+DATABASE_URL=postgresql+psycopg://tapak:tapak@localhost:5432/tapak alembic -c backend/alembic.ini upgrade head
+
+# apply migrations inside the running backend container instead (uses the container's own DATABASE_URL from .env):
+docker compose exec backend alembic -c backend/alembic.ini upgrade head
+```
+
+Migrations are **not** applied automatically on container start — run the command above once after `docker compose up -d --build` and again after every new migration lands.
+
+**Hostname gotcha:** `.env`'s `DATABASE_URL` points at `db` (the Docker Compose network hostname), which only resolves from inside a container. Running Alembic from your host (e.g. to autogenerate a migration) needs `localhost` instead, as shown above.
+
+Autogenerate only detects model changes if every ORM class is registered on `Base.metadata` before Alembic inspects it — `backend/db/migrations/env.py` handles this by importing `backend.db.models`, so a new entity just needs adding to `backend/db/models/__init__.py`'s exports.
+
 ## Running tests
 
 ```bash
@@ -81,7 +103,9 @@ pytest -q       # quieter output
 pytest -k name  # run only tests matching "name"
 ```
 
-Tests live under `backend/tests/`, mirroring the module they test (e.g. `backend/routes/health.py` → `backend/tests/test_health.py`). They run against the FastAPI app directly via `TestClient` — no Docker or a real Postgres instance needed for the tests that exist today. If a test later needs the database, prefer pointing it at a throwaway Postgres (e.g. via `docker compose up -d db`) over mocking the DB — see the note in `backend/db/README.md` about not skipping real behavior at that layer.
+Tests live under `backend/tests/`, mirroring the module they test (e.g. `backend/routes/health.py` → `backend/tests/test_health.py`). Most run against the FastAPI app directly via `TestClient` and don't need a database (`test_health.py`, `test_gap_assessment_service.py`, `test_shared_types_gap_assessment.py`).
+
+Tests that touch the database (`test_household.py`, `test_gap_assessment.py`, `test_rules_engine.py`, `test_labour_declaration.py`, `test_verification_engine.py`, `test_db_models.py`) need a reachable Postgres, per the note in `backend/db/README.md` about not mocking the DB layer — start one with `docker compose up -d db` first. They run against a separate `tapak_test` database (auto-created on first run, isolated from whatever's in your local `tapak` dev database), migrated with real Alembic migrations rather than `Base.metadata.create_all()` so the migration files themselves are exercised, not just the ORM models. Point them elsewhere with `TEST_DATABASE_URL` if needed; it defaults to `postgresql+psycopg://tapak:tapak@localhost:5432/tapak_test`.
 
 You may see a `StarletteDeprecationWarning` about `httpx2` when running tests — that's expected on current FastAPI/Starlette versions and safe to ignore for now.
 
@@ -97,3 +121,4 @@ You may see a `StarletteDeprecationWarning` about `httpx2` when running tests �
 - [ ] `ruff format .` has been run
 - [ ] `pytest` passes
 - [ ] If you touched `pyproject.toml`, the `Dockerfile`, or anything under `backend/`/`packages/`: `docker compose up -d --build` succeeds and `curl localhost:8000/health` still returns `{"status":"ok"}`
+- [ ] If you added or changed a migration: `docker compose down -v && docker compose up -d --build`, then `docker compose exec backend alembic -c backend/alembic.ini upgrade head` succeeds against a fresh database

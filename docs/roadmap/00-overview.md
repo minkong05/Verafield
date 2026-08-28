@@ -1,6 +1,6 @@
 # TAPAK MVP Feature Roadmap
 
-Source: `../tech.md` (Section 6, Product Architecture and Technical Feasibility) and `../eudr.md` (Regulation (EU) 2023/1115). This roadmap covers **MVP scope only** — what is needed to deliver the first compliant evidence pack ahead of the 30 December 2026 deadline. Post-MVP expansion (Peninsular rulebook, multi-mill scaling, a second commodity) is out of scope here.
+Source: `../tech.md` (Section 6, Product Architecture and Technical Feasibility) and `../eudr.md` (Regulation (EU) 2023/1115). This roadmap covers **MVP scope only** — what is needed to deliver the first compliant evidence pack ahead of the 30 December 2026 deadline. Post-MVP expansion (Peninsular rulebook, multi-mill scaling, a second commodity) is out of scope here — with the exception of the tenant identity that scaling later builds on, which is in scope as Feature 10 because the M8 pilot's two mills cannot be told apart without it.
 
 ## MVP philosophy
 
@@ -13,6 +13,8 @@ Per tech.md §6.6: the MVP is not the platform. It is a Gap Report for 20 househ
 5. Let a mill see its own compliance status without asking us.
 6. Stop re-collecting what national systems already hold.
 7. Keep the pack valid year over year, not just once.
+
+Features 10 and 11 do not appear in that sequence because they sit beneath it: every step above is scoped to a mill, and 10 is what makes a mill a real, identified thing rather than a value a caller asserts. 11 then proves a caller is the mill it claims to be.
 
 ## Build order
 
@@ -27,10 +29,17 @@ Per tech.md §6.6: the MVP is not the platform. It is a Gap Report for 20 househ
 | [07](07-supplier-mill-dashboard.md) | Supplier / Mill Compliance Dashboard | Live cleared / pending / frozen status per supplier, visible only to that supplier's mill |
 | [08](08-national-system-integration.md) | National System Integration | Read-only interface into SIMS, GeoSAWIT, and e-MSPO, keyed on MPOB licence number |
 | [09](09-annual-renewal-workflow.md) | Annual Renewal Workflow | Re-verification and re-issuance of the evidence pack each year, as EUDR due diligence requires |
+| [10](10-mill-registry.md) | Mill Registry | The registry of onboarded mills — the tenant identity every record in 01–09 is scoped by |
+| [11](11-mill-authentication.md) | Mill Authentication | Proves a caller is the mill it claims to be, so the tenant comes from a credential rather than the request |
 
 ## Dependency shape
 
 ```
+10 Mill Registry ──> 11 Mill Authentication
+        │
+        └──> every feature below is scoped by the mill 10 registers
+             │
+             v
 01 Gap Assessment ──┐
                      ├──> 02 Land & Ownership ──┐
                      ├──> 03 Labour & Rights    ├──> 05 Five-Signal Engine ──> 06 Evidence Pack ──> 07 Dashboard
@@ -42,4 +51,4 @@ Per tech.md §6.6: the MVP is not the platform. It is a Gap Report for 20 househ
                                                                               09 Annual Renewal
 ```
 
-01 can ship as a manual process before any of 02–09 exist. 05 depends on 02–04 producing raw signals to cross-check. 06 depends on 05 clearing a record. 08 is a cross-cutting input that 02 and 05 both consume once available. 09 depends on 06 already existing once, since renewal re-runs the same pipeline.
+01 can ship as a manual process before any of 02–09 exist. 05 depends on 02–04 producing raw signals to cross-check. 06 depends on 05 clearing a record. 08 is a cross-cutting input that 02 and 05 both consume once available. 09 depends on 06 already existing once, since renewal re-runs the same pipeline. 10 is the one feature whose number does not match its dependency position: it underpins all of 01–09 but was written after them, once the cost of leaving mill identity implicit became clear. 11 depends on 10 and blocks nothing — 01–09 work under 10 alone, and gain confidentiality rather than capability when 11 ships.

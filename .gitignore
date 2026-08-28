@@ -224,3 +224,16 @@ __marimo__/
 ._*
 .Spotlight-V100
 .Trashes
+
+<<<<<<< Updated upstream
+# plan
+docs/plans/
+
+# claude
+REPO-BRIEF.md
+=======
+# Node / Vite
+node_modules/
+.npm-cache/
+*.tsbuildinfo
+>>>>>>> Stashed changes
