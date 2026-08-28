@@ -21,7 +21,10 @@ npm install
 npm run dev
 ```
 
-Run `npm run build` before committing frontend changes.
+During local development, Vite proxies `/api` requests to the FastAPI service at
+`http://localhost:8000`. Copy `.env.example` to `.env` to override the public API
+base path for another environment. Run `npm run build` before committing frontend
+changes.
 
 ## Non-goals
 
