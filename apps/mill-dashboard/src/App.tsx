@@ -8,13 +8,14 @@ import { usesMockData } from "./data/dashboard";
 import { useDashboardData } from "./hooks/useDashboardData";
 import { useSupplierDetail } from "./hooks/useSupplierDetail";
 import { useReviewQueue } from "./hooks/useReviewQueue";
+import { useEvidencePacks } from "./hooks/useEvidencePacks";
 import { DEMO_MILL_ID } from "./mocks/dashboard";
 import EvidencePacksPage from "./pages/EvidencePacksPage";
 import OverviewPage from "./pages/OverviewPage";
 import RenewalsPage from "./pages/RenewalsPage";
 import ReviewQueuePage from "./pages/ReviewQueuePage";
 import SuppliersPage from "./pages/SuppliersPage";
-import type { MillDashboardSupplier, RenewalStatus, UUID } from "./types/api";
+import type { Batch, MillDashboardSupplier, RenewalStatus, UUID } from "./types/api";
 
 type PageId = "overview" | "suppliers" | "review" | "packs" | "renewals";
 
@@ -28,6 +29,7 @@ const pageLabels: Record<PageId, string> = {
 
 const emptySuppliers: MillDashboardSupplier[] = [];
 const emptyRenewals: RenewalStatus[] = [];
+const emptyBatches: Batch[] = [];
 
 function App() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -42,6 +44,10 @@ function App() {
     activePage === "review" && Boolean(data),
     data?.suppliers ?? emptySuppliers,
     data?.renewals ?? emptyRenewals,
+  );
+  const evidencePacks = useEvidencePacks(
+    activePage === "packs" && Boolean(data),
+    data?.batches ?? emptyBatches,
   );
 
   const openPage = (page: PageId) => {
@@ -68,7 +74,7 @@ function App() {
       case "review":
         return <ReviewQueuePage items={reviewQueue.items} loading={reviewQueue.loading} error={reviewQueue.error} onRetry={reviewQueue.retry} onSelectSupplier={setSelectedSupplierId} />;
       case "packs":
-        return <EvidencePacksPage batches={data.batches} />;
+        return <EvidencePacksPage batches={data.batches} records={evidencePacks.records} loading={evidencePacks.loading} error={evidencePacks.pageError} onGenerate={evidencePacks.generate} />;
       case "renewals":
         return <RenewalsPage suppliers={data.suppliers} renewals={data.renewals} />;
       default:

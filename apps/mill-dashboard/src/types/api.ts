@@ -60,6 +60,16 @@ export interface Batch {
   plots: BatchPlot[];
 }
 
+export interface EvidencePack {
+  id: UUID;
+  mill_id: UUID;
+  batch_id: UUID;
+  assembled_data: Record<string, unknown>;
+  geojson: Record<string, unknown>;
+  generated_by: string;
+  generated_at: DateTimeString;
+}
+
 export interface ApiErrorBody {
   detail?: string;
 }
