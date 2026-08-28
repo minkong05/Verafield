@@ -1,10 +1,11 @@
 import { Search } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import { dashboardSuppliers, supplierDetails } from "../mocks/dashboard";
-import type { MillDashboardStatus, UUID } from "../types/api";
+import { supplierDetails } from "../mocks/dashboard";
+import type { MillDashboardStatus, MillDashboardSupplier, UUID } from "../types/api";
 
 interface SuppliersPageProps {
+  suppliers: MillDashboardSupplier[];
   onSelectSupplier: (householdId: UUID) => void;
 }
 
@@ -14,19 +15,19 @@ const statusLabels: Record<MillDashboardStatus, string> = {
   frozen: "Frozen",
 };
 
-function SuppliersPage({ onSelectSupplier }: SuppliersPageProps) {
+function SuppliersPage({ suppliers: supplierRecords, onSelectSupplier }: SuppliersPageProps) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<MillDashboardStatus | "all">("all");
 
   const suppliers = useMemo(
     () =>
-      dashboardSuppliers.filter((supplier) => {
+      supplierRecords.filter((supplier) => {
         const matchesQuery = `${supplier.name} ${supplier.district}`
           .toLowerCase()
           .includes(query.toLowerCase());
         return matchesQuery && (status === "all" || supplier.status === status);
       }),
-    [query, status],
+    [query, status, supplierRecords],
   );
 
   return (
@@ -81,8 +82,8 @@ function SuppliersPage({ onSelectSupplier }: SuppliersPageProps) {
                   <tr key={supplier.household_id} onClick={() => onSelectSupplier(supplier.household_id)}>
                     <td className="data-table__primary">{supplier.name}</td>
                     <td>{supplier.district}</td>
-                    <td>{detail.nationalSystems.mpob_licence_number}</td>
-                    <td>{detail.plots.length}</td>
+                    <td>{detail?.nationalSystems.mpob_licence_number ?? "—"}</td>
+                    <td>{detail?.plots.length ?? "—"}</td>
                     <td>
                       <span className={`status status--${supplier.status}`}>
                         {statusLabels[supplier.status]}

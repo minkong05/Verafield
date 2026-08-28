@@ -3,7 +3,10 @@ import { useState } from "react";
 
 import SupplierDrawer from "./components/SupplierDrawer";
 import ThemeToggle from "./components/ThemeToggle";
-import { supplierDetails } from "./mocks/dashboard";
+import PageState from "./components/PageState";
+import { usesMockData } from "./data/dashboard";
+import { useDashboardData } from "./hooks/useDashboardData";
+import { DEMO_MILL_ID, supplierDetails } from "./mocks/dashboard";
 import EvidencePacksPage from "./pages/EvidencePacksPage";
 import OverviewPage from "./pages/OverviewPage";
 import RenewalsPage from "./pages/RenewalsPage";
@@ -25,6 +28,8 @@ function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [activePage, setActivePage] = useState<PageId>("overview");
   const [selectedSupplierId, setSelectedSupplierId] = useState<UUID | null>(null);
+  const millId = import.meta.env.VITE_MILL_ID ?? DEMO_MILL_ID;
+  const { data, error, loading, retry } = useDashboardData(millId);
 
   const openPage = (page: PageId) => {
     setActivePage(page);
@@ -32,17 +37,29 @@ function App() {
   };
 
   const renderPage = () => {
+    if (loading) {
+      return <PageState kind="loading" message="Preparing supplier and compliance records." />;
+    }
+
+    if (error) {
+      return <PageState kind="error" message={error} onRetry={retry} />;
+    }
+
+    if (!data) {
+      return <PageState kind="empty" message="No dashboard data is available for this mill." />;
+    }
+
     switch (activePage) {
       case "suppliers":
-        return <SuppliersPage onSelectSupplier={setSelectedSupplierId} />;
+        return <SuppliersPage suppliers={data.suppliers} onSelectSupplier={setSelectedSupplierId} />;
       case "review":
         return <ReviewQueuePage onSelectSupplier={setSelectedSupplierId} />;
       case "packs":
-        return <EvidencePacksPage />;
+        return <EvidencePacksPage batches={data.batches} />;
       case "renewals":
-        return <RenewalsPage />;
+        return <RenewalsPage suppliers={data.suppliers} renewals={data.renewals} />;
       default:
-        return <OverviewPage />;
+        return <OverviewPage suppliers={data.suppliers} renewals={data.renewals} batches={data.batches} usingMocks={usesMockData} />;
     }
   };
 
@@ -137,7 +154,7 @@ function App() {
         <main className="page-content">{renderPage()}</main>
       </div>
       <SupplierDrawer
-        detail={selectedSupplierId ? supplierDetails[selectedSupplierId] : null}
+        detail={selectedSupplierId ? supplierDetails[selectedSupplierId] ?? null : null}
         onClose={() => setSelectedSupplierId(null)}
       />
     </div>

@@ -1,16 +1,21 @@
 import { CalendarClock } from "lucide-react";
 
-import { dashboardSuppliers, renewalStatuses } from "../mocks/dashboard";
+import type { MillDashboardSupplier, RenewalStatus } from "../types/api";
 
 const formatDate = (value: string | null) =>
   value
     ? new Intl.DateTimeFormat("en-MY", { day: "numeric", month: "short", year: "numeric" }).format(new Date(value))
     : "Not issued";
 
-function RenewalsPage() {
-  const records = dashboardSuppliers.map((supplier) => ({
+interface RenewalsPageProps {
+  suppliers: MillDashboardSupplier[];
+  renewals: RenewalStatus[];
+}
+
+function RenewalsPage({ suppliers, renewals }: RenewalsPageProps) {
+  const records = suppliers.map((supplier) => ({
     supplier,
-    renewal: renewalStatuses.find((item) => item.household_id === supplier.household_id) ?? null,
+    renewal: renewals.find((item) => item.household_id === supplier.household_id) ?? null,
   }));
 
   return (

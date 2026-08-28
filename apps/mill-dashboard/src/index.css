@@ -778,3 +778,41 @@ h2 {
     grid-template-columns: 1fr;
   }
 }
+.page-state {
+  min-height: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 48px 24px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.page-state > svg {
+  width: 24px;
+  height: 24px;
+}
+
+.page-state h2,
+.page-state p {
+  margin: 0;
+}
+
+.page-state h2 {
+  color: var(--text-primary);
+  font-size: 18px;
+}
+
+.page-state .button {
+  margin-top: 8px;
+}
+
+.page-state__spinner {
+  animation: page-state-spin 0.9s linear infinite;
+}
+
+@keyframes page-state-spin {
+  to { transform: rotate(360deg); }
+}

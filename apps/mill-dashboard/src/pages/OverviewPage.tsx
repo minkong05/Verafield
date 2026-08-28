@@ -1,7 +1,13 @@
 import { ArrowRight, Clock3, PackageCheck, ShieldCheck, Snowflake, Users } from "lucide-react";
 
-import { batches, dashboardSuppliers, renewalStatuses } from "../mocks/dashboard";
-import type { MillDashboardStatus } from "../types/api";
+import type { Batch, MillDashboardStatus, MillDashboardSupplier, RenewalStatus } from "../types/api";
+
+interface OverviewPageProps {
+  suppliers: MillDashboardSupplier[];
+  renewals: RenewalStatus[];
+  batches: Batch[];
+  usingMocks: boolean;
+}
 
 const statusLabels: Record<MillDashboardStatus, string> = {
   cleared: "Cleared",
@@ -17,8 +23,8 @@ const formatDate = (value: string) =>
     new Date(value),
   );
 
-function OverviewPage() {
-  const counts = dashboardSuppliers.reduce(
+function OverviewPage({ suppliers, renewals, batches, usingMocks }: OverviewPageProps) {
+  const counts = suppliers.reduce(
     (result, supplier) => {
       result[supplier.status] += 1;
       return result;
@@ -26,10 +32,10 @@ function OverviewPage() {
     { cleared: 0, pending: 0, frozen: 0 },
   );
 
-  const suppliersNeedingAttention = dashboardSuppliers.filter(
+  const suppliersNeedingAttention = suppliers.filter(
     (supplier) => supplier.status !== "cleared",
   );
-  const lapsedRenewals = renewalStatuses.filter((renewal) => renewal.lapsed);
+  const lapsedRenewals = renewals.filter((renewal) => renewal.lapsed);
 
   return (
     <>
@@ -41,7 +47,7 @@ function OverviewPage() {
             Supplier compliance and evidence preparation for Sungai Murni Mill.
           </p>
         </div>
-        <span className="data-source-note">Development preview data</span>
+        <span className="data-source-note">{usingMocks ? "Development preview data" : "Live backend data"}</span>
       </header>
 
       <section className="overview-metrics" aria-label="Supplier compliance summary">
@@ -51,7 +57,7 @@ function OverviewPage() {
           </span>
           <div>
             <p>Total suppliers</p>
-            <strong>{dashboardSuppliers.length}</strong>
+            <strong>{suppliers.length}</strong>
           </div>
         </article>
         <article className="metric-card">

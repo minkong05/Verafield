@@ -1,6 +1,7 @@
 import { Download, FileArchive, Plus } from "lucide-react";
 
-import { batches, evidencePackStates } from "../mocks/dashboard";
+import { evidencePackStates } from "../mocks/dashboard";
+import type { Batch } from "../types/api";
 import type { EvidencePackState } from "../types/ui";
 
 const stateLabels: Record<EvidencePackState, string> = {
@@ -18,7 +19,11 @@ const stateClass: Record<EvidencePackState, string> = {
 const formatDate = (value: string) =>
   new Intl.DateTimeFormat("en-MY", { day: "numeric", month: "short", year: "numeric" }).format(new Date(value));
 
-function EvidencePacksPage() {
+interface EvidencePacksPageProps {
+  batches: Batch[];
+}
+
+function EvidencePacksPage({ batches }: EvidencePacksPageProps) {
   return (
     <>
       <header className="page-heading">
@@ -36,7 +41,7 @@ function EvidencePacksPage() {
             <thead><tr><th>Batch</th><th>Recipient</th><th>Net mass</th><th>Created</th><th>Pack status</th><th></th></tr></thead>
             <tbody>
               {batches.map((batch) => {
-                const state = evidencePackStates[batch.id];
+                const state = evidencePackStates[batch.id] ?? "not_generated";
                 return (
                   <tr key={batch.id}>
                     <td><span className="batch-name"><FileArchive aria-hidden="true" /><span><strong>{batch.trade_name}</strong><small>{batch.id.slice(0, 8)}</small></span></span></td>
