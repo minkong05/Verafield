@@ -12,9 +12,16 @@ Evidence pack generation and renewal scheduling themselves are backend jobs (`ba
 
 `backend/routes` — reads status and evidence-pack data. No direct database or service access.
 
-## Indicative tech (not finalized)
+## Frontend stack
 
-Not yet specified in tech.md beyond "document generation service and API" for the layer as a whole — a plain server-rendered or SPA web app is enough for MVP. Confirmed with a development partner at Sprint 0.
+The dashboard is scaffolded as a React + TypeScript single-page application using Vite.
+
+```bash
+npm install
+npm run dev
+```
+
+Run `npm run build` before committing frontend changes.
 
 ## Non-goals
 
