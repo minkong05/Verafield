@@ -7,13 +7,14 @@ import PageState from "./components/PageState";
 import { usesMockData } from "./data/dashboard";
 import { useDashboardData } from "./hooks/useDashboardData";
 import { useSupplierDetail } from "./hooks/useSupplierDetail";
+import { useReviewQueue } from "./hooks/useReviewQueue";
 import { DEMO_MILL_ID } from "./mocks/dashboard";
 import EvidencePacksPage from "./pages/EvidencePacksPage";
 import OverviewPage from "./pages/OverviewPage";
 import RenewalsPage from "./pages/RenewalsPage";
 import ReviewQueuePage from "./pages/ReviewQueuePage";
 import SuppliersPage from "./pages/SuppliersPage";
-import type { UUID } from "./types/api";
+import type { MillDashboardSupplier, RenewalStatus, UUID } from "./types/api";
 
 type PageId = "overview" | "suppliers" | "review" | "packs" | "renewals";
 
@@ -25,6 +26,9 @@ const pageLabels: Record<PageId, string> = {
   renewals: "Renewals",
 };
 
+const emptySuppliers: MillDashboardSupplier[] = [];
+const emptyRenewals: RenewalStatus[] = [];
+
 function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [activePage, setActivePage] = useState<PageId>("overview");
@@ -34,6 +38,11 @@ function App() {
   const selectedSupplier = data?.suppliers.find((supplier) => supplier.household_id === selectedSupplierId) ?? null;
   const selectedRenewal = data?.renewals.find((renewal) => renewal.household_id === selectedSupplierId) ?? null;
   const supplierDetail = useSupplierDetail(selectedSupplier, selectedRenewal);
+  const reviewQueue = useReviewQueue(
+    activePage === "review" && Boolean(data),
+    data?.suppliers ?? emptySuppliers,
+    data?.renewals ?? emptyRenewals,
+  );
 
   const openPage = (page: PageId) => {
     setActivePage(page);
@@ -57,7 +66,7 @@ function App() {
       case "suppliers":
         return <SuppliersPage suppliers={data.suppliers} onSelectSupplier={setSelectedSupplierId} />;
       case "review":
-        return <ReviewQueuePage onSelectSupplier={setSelectedSupplierId} />;
+        return <ReviewQueuePage items={reviewQueue.items} loading={reviewQueue.loading} error={reviewQueue.error} onRetry={reviewQueue.retry} onSelectSupplier={setSelectedSupplierId} />;
       case "packs":
         return <EvidencePacksPage batches={data.batches} />;
       case "renewals":

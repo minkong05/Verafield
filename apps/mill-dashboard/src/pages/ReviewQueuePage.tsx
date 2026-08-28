@@ -1,13 +1,18 @@
 import { AlertTriangle, ArrowRight } from "lucide-react";
 
-import { reviewItems } from "../mocks/dashboard";
+import PageState from "../components/PageState";
 import type { UUID } from "../types/api";
+import type { ReviewItem } from "../types/ui";
 
 interface ReviewQueuePageProps {
+  items: ReviewItem[];
+  loading: boolean;
+  error: string | null;
+  onRetry: () => void;
   onSelectSupplier: (householdId: UUID) => void;
 }
 
-function ReviewQueuePage({ onSelectSupplier }: ReviewQueuePageProps) {
+function ReviewQueuePage({ items, loading, error, onRetry, onSelectSupplier }: ReviewQueuePageProps) {
   return (
     <>
       <header className="page-heading">
@@ -25,11 +30,11 @@ function ReviewQueuePage({ onSelectSupplier }: ReviewQueuePageProps) {
         <header className="data-panel__header">
           <div>
             <h2>Open items</h2>
-            <p>{reviewItems.length} records require analyst attention.</p>
+            <p>{items.length} records require analyst attention.</p>
           </div>
         </header>
-        <div className="review-list">
-          {reviewItems.map((item) => (
+        {loading ? <PageState kind="loading" message="Checking supplier compliance records." /> : error ? <PageState kind="error" message={error} onRetry={onRetry} /> : items.length === 0 ? <PageState kind="empty" message="All supplier checks are currently clear." /> : <div className="review-list">
+          {items.map((item) => (
             <button
               className="review-row"
               key={item.id}
@@ -47,7 +52,7 @@ function ReviewQueuePage({ onSelectSupplier }: ReviewQueuePageProps) {
               <ArrowRight aria-hidden="true" />
             </button>
           ))}
-        </div>
+        </div>}
       </section>
     </>
   );
