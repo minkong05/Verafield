@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from backend.db.models.labour_declaration import ConsentRecord, LabourDeclaration
 from backend.services.gap_assessment.service import get_household
-from shared_types.labour_declaration import ConsentRecordCreate, LabourDeclarationCreate
+from packages.shared_types.labour_declaration import ConsentRecordCreate, LabourDeclarationCreate
 
 
 class LabourDeclarationNotFoundError(Exception):

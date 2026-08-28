@@ -6,9 +6,9 @@ from sqlalchemy.orm import Session
 from backend.db.session import get_db
 from backend.services.gap_assessment.service import HouseholdNotFoundError
 from backend.services.labour_declaration import service
-from shared_types import ConsentRecord as ConsentRecordSchema
-from shared_types import ConsentRecordCreate, LabourDeclarationCreate
-from shared_types import LabourDeclaration as LabourDeclarationSchema
+from packages.shared_types import ConsentRecord as ConsentRecordSchema
+from packages.shared_types import ConsentRecordCreate, LabourDeclarationCreate
+from packages.shared_types import LabourDeclaration as LabourDeclarationSchema
 
 router = APIRouter(prefix="/mills/{mill_id}/households/{household_id}", tags=["labour-declaration"])
 
