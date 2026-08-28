@@ -145,3 +145,27 @@ export interface NationalSystemsLookup {
   status: FieldVerificationStatus;
   looked_up_at: DateTimeString;
 }
+
+export interface LabourDeclaration {
+  id: UUID;
+  mill_id: UUID;
+  household_id: UUID;
+  labour_arrangement_description: string;
+  no_child_labour_confirmed: boolean;
+  has_land_dispute: boolean;
+  land_dispute_notes: string | null;
+  signature_method: string;
+  collected_by: string;
+  collected_at: DateTimeString;
+}
+
+export interface ConsentRecord {
+  id: UUID;
+  mill_id: UUID;
+  household_id: UUID;
+  mykad_last4: string;
+  credit_referral_consent_given: boolean;
+  signature_method: string;
+  collected_by: string;
+  collected_at: DateTimeString;
+}

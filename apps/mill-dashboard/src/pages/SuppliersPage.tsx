@@ -82,7 +82,7 @@ function SuppliersPage({ suppliers: supplierRecords, onSelectSupplier }: Supplie
                   <tr key={supplier.household_id} onClick={() => onSelectSupplier(supplier.household_id)}>
                     <td className="data-table__primary">{supplier.name}</td>
                     <td>{supplier.district}</td>
-                    <td>{detail?.nationalSystems.mpob_licence_number ?? "—"}</td>
+                    <td>{detail?.nationalSystems?.mpob_licence_number ?? "—"}</td>
                     <td>{detail?.plots.length ?? "—"}</td>
                     <td>
                       <span className={`status status--${supplier.status}`}>

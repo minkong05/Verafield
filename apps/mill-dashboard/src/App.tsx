@@ -6,7 +6,8 @@ import ThemeToggle from "./components/ThemeToggle";
 import PageState from "./components/PageState";
 import { usesMockData } from "./data/dashboard";
 import { useDashboardData } from "./hooks/useDashboardData";
-import { DEMO_MILL_ID, supplierDetails } from "./mocks/dashboard";
+import { useSupplierDetail } from "./hooks/useSupplierDetail";
+import { DEMO_MILL_ID } from "./mocks/dashboard";
 import EvidencePacksPage from "./pages/EvidencePacksPage";
 import OverviewPage from "./pages/OverviewPage";
 import RenewalsPage from "./pages/RenewalsPage";
@@ -30,6 +31,9 @@ function App() {
   const [selectedSupplierId, setSelectedSupplierId] = useState<UUID | null>(null);
   const millId = import.meta.env.VITE_MILL_ID ?? DEMO_MILL_ID;
   const { data, error, loading, retry } = useDashboardData(millId);
+  const selectedSupplier = data?.suppliers.find((supplier) => supplier.household_id === selectedSupplierId) ?? null;
+  const selectedRenewal = data?.renewals.find((renewal) => renewal.household_id === selectedSupplierId) ?? null;
+  const supplierDetail = useSupplierDetail(selectedSupplier, selectedRenewal);
 
   const openPage = (page: PageId) => {
     setActivePage(page);
@@ -154,7 +158,10 @@ function App() {
         <main className="page-content">{renderPage()}</main>
       </div>
       <SupplierDrawer
-        detail={selectedSupplierId ? supplierDetails[selectedSupplierId] ?? null : null}
+        detail={supplierDetail.detail}
+        error={supplierDetail.error}
+        loading={supplierDetail.loading}
+        supplier={selectedSupplier}
         onClose={() => setSelectedSupplierId(null)}
       />
     </div>
