@@ -1,10 +1,50 @@
 import { Bell, FileCheck2, Menu, RefreshCw, RotateCcw, Search, Users, X } from "lucide-react";
 import { useState } from "react";
 
+import SupplierDrawer from "./components/SupplierDrawer";
 import ThemeToggle from "./components/ThemeToggle";
+import { supplierDetails } from "./mocks/dashboard";
+import EvidencePacksPage from "./pages/EvidencePacksPage";
+import OverviewPage from "./pages/OverviewPage";
+import RenewalsPage from "./pages/RenewalsPage";
+import ReviewQueuePage from "./pages/ReviewQueuePage";
+import SuppliersPage from "./pages/SuppliersPage";
+import type { UUID } from "./types/api";
+
+type PageId = "overview" | "suppliers" | "review" | "packs" | "renewals";
+
+const pageLabels: Record<PageId, string> = {
+  overview: "Overview",
+  suppliers: "Suppliers",
+  review: "Review queue",
+  packs: "Evidence packs",
+  renewals: "Renewals",
+};
 
 function App() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [activePage, setActivePage] = useState<PageId>("overview");
+  const [selectedSupplierId, setSelectedSupplierId] = useState<UUID | null>(null);
+
+  const openPage = (page: PageId) => {
+    setActivePage(page);
+    setMenuOpen(false);
+  };
+
+  const renderPage = () => {
+    switch (activePage) {
+      case "suppliers":
+        return <SuppliersPage onSelectSupplier={setSelectedSupplierId} />;
+      case "review":
+        return <ReviewQueuePage onSelectSupplier={setSelectedSupplierId} />;
+      case "packs":
+        return <EvidencePacksPage />;
+      case "renewals":
+        return <RenewalsPage />;
+      default:
+        return <OverviewPage />;
+    }
+  };
 
   return (
     <div className="app-shell">
@@ -26,33 +66,33 @@ function App() {
 
         <nav className="navigation" aria-label="Main navigation">
           <p className="navigation__label">Workspace</p>
-          <a className="navigation__item navigation__item--active" href="#overview">
+          <button className={`navigation__item${activePage === "overview" ? " navigation__item--active" : ""}`} type="button" onClick={() => openPage("overview")}>
             <RefreshCw aria-hidden="true" />
             Overview
-          </a>
-          <a className="navigation__item" href="#suppliers">
+          </button>
+          <button className={`navigation__item${activePage === "suppliers" ? " navigation__item--active" : ""}`} type="button" onClick={() => openPage("suppliers")}>
             <Users aria-hidden="true" />
             Suppliers
-          </a>
-          <a className="navigation__item" href="#review">
+          </button>
+          <button className={`navigation__item${activePage === "review" ? " navigation__item--active" : ""}`} type="button" onClick={() => openPage("review")}>
             <FileCheck2 aria-hidden="true" />
             Review queue
-          </a>
-          <a className="navigation__item" href="#packs">
+          </button>
+          <button className={`navigation__item${activePage === "packs" ? " navigation__item--active" : ""}`} type="button" onClick={() => openPage("packs")}>
             <FileCheck2 aria-hidden="true" />
             Evidence packs
-          </a>
-          <a className="navigation__item" href="#renewals">
+          </button>
+          <button className={`navigation__item${activePage === "renewals" ? " navigation__item--active" : ""}`} type="button" onClick={() => openPage("renewals")}>
             <RotateCcw aria-hidden="true" />
             Renewals
-          </a>
+          </button>
         </nav>
 
         <div className="sidebar__profile">
-          <span className="avatar">AN</span>
+          <span className="avatar">SM</span>
           <span>
-            <strong>--</strong>
-            <small>Compliance analyst</small>
+            <strong>Sungai Murni</strong>
+            <small>Mill account</small>
           </span>
         </div>
       </aside>
@@ -79,7 +119,7 @@ function App() {
             </button>
             <span className="breadcrumb">Sungai Murni Mill</span>
             <span className="breadcrumb__separator">/</span>
-            <strong>Overview</strong>
+            <strong>{pageLabels[activePage]}</strong>
           </div>
           <div className="topbar__actions">
             <label className="topbar-search">
@@ -94,32 +134,12 @@ function App() {
           </div>
         </header>
 
-        <main className="page-content" id="overview">
-          <header className="page-heading">
-            <div>
-              <p className="eyebrow">Mill workspace</p>
-              <h1>Overview</h1>
-              <p className="text-muted">
-                Supplier compliance and evidence preparation for Sungai Murni Mill.
-              </p>
-            </div>
-          </header>
-
-          <section className="content-placeholder" aria-labelledby="workspace-ready">
-            <div>
-              <h2 id="workspace-ready">Workspace structure ready</h2>
-              <p className="text-muted">
-                Supplier data and backend status results will be added in the next stage.
-              </p>
-            </div>
-            <div className="foundation-row" aria-label="Compliance status styles">
-              <span className="status status--cleared">Cleared</span>
-              <span className="status status--pending">Pending</span>
-              <span className="status status--frozen">Frozen</span>
-            </div>
-          </section>
-        </main>
+        <main className="page-content">{renderPage()}</main>
       </div>
+      <SupplierDrawer
+        detail={selectedSupplierId ? supplierDetails[selectedSupplierId] : null}
+        onClose={() => setSelectedSupplierId(null)}
+      />
     </div>
   );
 }
