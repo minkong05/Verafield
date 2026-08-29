@@ -26,6 +26,7 @@ interface EvidencePacksPageProps {
   loading: boolean;
   error: string | null;
   onGenerate: (batch: Batch) => void;
+  onCreate: () => void;
 }
 
 function downloadPack(batch: Batch, record: EvidencePackRecord) {
@@ -39,7 +40,7 @@ function downloadPack(batch: Batch, record: EvidencePackRecord) {
   URL.revokeObjectURL(url);
 }
 
-function EvidencePacksPage({ batches, records, loading, error, onGenerate }: EvidencePacksPageProps) {
+function EvidencePacksPage({ batches, records, loading, error, onGenerate, onCreate }: EvidencePacksPageProps) {
   return (
     <>
       <header className="page-heading">
@@ -48,7 +49,7 @@ function EvidencePacksPage({ batches, records, loading, error, onGenerate }: Evi
           <h1>Evidence packs</h1>
           <p className="text-muted">Shipment batches and their Annex II evidence output.</p>
         </div>
-        <button className="button button--primary" type="button"><Plus aria-hidden="true" /> Create batch</button>
+        <button className="button button--primary" type="button" onClick={onCreate}><Plus aria-hidden="true" /> Create batch</button>
       </header>
 
       <section className="data-panel">

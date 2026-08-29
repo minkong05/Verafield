@@ -38,9 +38,6 @@ function SuppliersPage({ suppliers: supplierRecords, onSelectSupplier }: Supplie
           <h1>Suppliers</h1>
           <p className="text-muted">Households and plots currently linked to this mill.</p>
         </div>
-        <button className="button button--primary" type="button">
-          Add supplier
-        </button>
       </header>
 
       <section className="data-panel">

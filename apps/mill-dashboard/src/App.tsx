@@ -1,9 +1,10 @@
-import { Bell, FileCheck2, Menu, RefreshCw, RotateCcw, Search, Users, X } from "lucide-react";
+import { FileCheck2, Menu, RefreshCw, RotateCcw, Users, X } from "lucide-react";
 import { useState } from "react";
 
 import SupplierDrawer from "./components/SupplierDrawer";
 import ThemeToggle from "./components/ThemeToggle";
 import PageState from "./components/PageState";
+import CreateBatchDialog from "./components/CreateBatchDialog";
 import { usesMockData } from "./data/dashboard";
 import { useDashboardData } from "./hooks/useDashboardData";
 import { useSupplierDetail } from "./hooks/useSupplierDetail";
@@ -35,8 +36,9 @@ function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [activePage, setActivePage] = useState<PageId>("overview");
   const [selectedSupplierId, setSelectedSupplierId] = useState<UUID | null>(null);
+  const [creatingBatch, setCreatingBatch] = useState(false);
   const millId = import.meta.env.VITE_MILL_ID ?? DEMO_MILL_ID;
-  const { data, error, loading, retry } = useDashboardData(millId);
+  const { data, error, loading, retry, addBatch } = useDashboardData(millId);
   const selectedSupplier = data?.suppliers.find((supplier) => supplier.household_id === selectedSupplierId) ?? null;
   const selectedRenewal = data?.renewals.find((renewal) => renewal.household_id === selectedSupplierId) ?? null;
   const supplierDetail = useSupplierDetail(selectedSupplier, selectedRenewal);
@@ -74,11 +76,11 @@ function App() {
       case "review":
         return <ReviewQueuePage items={reviewQueue.items} loading={reviewQueue.loading} error={reviewQueue.error} onRetry={reviewQueue.retry} onSelectSupplier={setSelectedSupplierId} />;
       case "packs":
-        return <EvidencePacksPage batches={data.batches} records={evidencePacks.records} loading={evidencePacks.loading} error={evidencePacks.pageError} onGenerate={evidencePacks.generate} />;
+        return <EvidencePacksPage batches={data.batches} records={evidencePacks.records} loading={evidencePacks.loading} error={evidencePacks.pageError} onGenerate={evidencePacks.generate} onCreate={() => setCreatingBatch(true)} />;
       case "renewals":
         return <RenewalsPage suppliers={data.suppliers} renewals={data.renewals} />;
       default:
-        return <OverviewPage suppliers={data.suppliers} renewals={data.renewals} batches={data.batches} usingMocks={usesMockData} />;
+        return <OverviewPage suppliers={data.suppliers} renewals={data.renewals} batches={data.batches} usingMocks={usesMockData} onViewSuppliers={() => openPage("suppliers")} />;
     }
   };
 
@@ -158,15 +160,7 @@ function App() {
             <strong>{pageLabels[activePage]}</strong>
           </div>
           <div className="topbar__actions">
-            <label className="topbar-search">
-              <Search aria-hidden="true" />
-              <span className="sr-only">Search</span>
-              <input placeholder="Search" />
-            </label>
             <ThemeToggle />
-            <button aria-label="Notifications" className="icon-button" type="button">
-              <Bell aria-hidden="true" />
-            </button>
           </div>
         </header>
 
@@ -178,6 +172,14 @@ function App() {
         loading={supplierDetail.loading}
         supplier={selectedSupplier}
         onClose={() => setSelectedSupplierId(null)}
+      />
+      <CreateBatchDialog
+        open={creatingBatch}
+        millId={millId}
+        suppliers={data?.suppliers ?? emptySuppliers}
+        renewals={data?.renewals ?? emptyRenewals}
+        onClose={() => setCreatingBatch(false)}
+        onCreated={addBatch}
       />
     </div>
   );

@@ -60,6 +60,18 @@ export interface Batch {
   plots: BatchPlot[];
 }
 
+export interface BatchCreateInput {
+  product_description: string;
+  trade_name: string;
+  hs_code: string;
+  net_mass_kg: DecimalString;
+  recipient_name: string;
+  recipient_postal_address: string;
+  recipient_email: string;
+  created_by: string;
+  plots: Array<{ plot_id: UUID; harvest_date: DateString }>;
+}
+
 export interface EvidencePack {
   id: UUID;
   mill_id: UUID;

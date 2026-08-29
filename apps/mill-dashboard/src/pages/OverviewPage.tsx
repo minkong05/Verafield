@@ -7,6 +7,7 @@ interface OverviewPageProps {
   renewals: RenewalStatus[];
   batches: Batch[];
   usingMocks: boolean;
+  onViewSuppliers: () => void;
 }
 
 const statusLabels: Record<MillDashboardStatus, string> = {
@@ -23,7 +24,7 @@ const formatDate = (value: string) =>
     new Date(value),
   );
 
-function OverviewPage({ suppliers, renewals, batches, usingMocks }: OverviewPageProps) {
+function OverviewPage({ suppliers, renewals, batches, usingMocks, onViewSuppliers }: OverviewPageProps) {
   const counts = suppliers.reduce(
     (result, supplier) => {
       result[supplier.status] += 1;
@@ -96,7 +97,7 @@ function OverviewPage({ suppliers, renewals, batches, usingMocks }: OverviewPage
               <h2 id="attention-title">Needs attention</h2>
               <p>Suppliers that are not currently cleared.</p>
             </div>
-            <button className="text-button" type="button">
+            <button className="text-button" type="button" onClick={onViewSuppliers}>
               View suppliers <ArrowRight aria-hidden="true" />
             </button>
           </header>

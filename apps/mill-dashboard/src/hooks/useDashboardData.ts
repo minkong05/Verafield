@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { loadDashboardData, type DashboardData } from "../data/dashboard";
-import type { UUID } from "../types/api";
+import type { Batch, UUID } from "../types/api";
 
 interface DashboardDataState {
   data: DashboardData | null;
   error: string | null;
   loading: boolean;
   retry: () => void;
+  addBatch: (batch: Batch) => void;
 }
 
 export function useDashboardData(millId: UUID): DashboardDataState {
@@ -17,6 +18,9 @@ export function useDashboardData(millId: UUID): DashboardDataState {
   const [requestVersion, setRequestVersion] = useState(0);
 
   const retry = useCallback(() => setRequestVersion((version) => version + 1), []);
+  const addBatch = useCallback((batch: Batch) => {
+    setData((current) => current ? { ...current, batches: [batch, ...current.batches] } : current);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -42,5 +46,5 @@ export function useDashboardData(millId: UUID): DashboardDataState {
     };
   }, [millId, requestVersion]);
 
-  return { data, error, loading, retry };
+  return { data, error, loading, retry, addBatch };
 }
