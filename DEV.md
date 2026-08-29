@@ -2,7 +2,7 @@
 
 This is the day-to-day reference for working on the TAPAK backend: linting with Ruff, running the stack with Docker Compose, running tests, and what to check before opening a PR. For what the project *is* and how the folders are organized, read [`README.md`](README.md) first — this doc assumes you've already skimmed that.
 
-Only `backend/` and `packages/shared_types/` have code today (`apps/field-collector` and `apps/mill-dashboard` don't have a chosen stack yet), so everything below is Python-focused.
+The backend and shared types use Python. `apps/mill-dashboard` is a React + TypeScript application; `apps/field-collector` remains a future deployable.
 
 ## First-time setup
 
@@ -14,6 +14,18 @@ cp .env.example .env
 ```
 
 `pip install -e ".[dev]"` installs the app's runtime dependencies (FastAPI, Uvicorn, SQLAlchemy, psycopg) plus dev tools (`ruff`, `pytest`, `httpx`), all declared in [`pyproject.toml`](pyproject.toml). Re-run it any time `pyproject.toml`'s dependency lists change.
+
+## Previewing the mill dashboard
+
+The dashboard uses mock data by default, so the backend and database do not need to be running.
+
+```bash
+cd apps/mill-dashboard
+npm install
+npm run dev
+```
+
+Open `http://localhost:5173` in a browser. See [`apps/mill-dashboard/README.md`](apps/mill-dashboard/README.md) for live backend configuration and integration details.
 
 ## Working with Ruff
 
