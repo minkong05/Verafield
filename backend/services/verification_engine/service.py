@@ -14,9 +14,9 @@ from backend.db.models.verification_engine import (
     YieldLicenceCheck,
 )
 from backend.services.gap_assessment.service import get_household
-from shared_types.enums import DeforestationStatus, FieldVerificationStatus, LandOwnershipStatus
-from shared_types.plot import PlotCreate
-from shared_types.verification_engine import (
+from packages.shared_types.enums import DeforestationStatus, FieldVerificationStatus, LandOwnershipStatus
+from packages.shared_types.plot import PlotCreate
+from packages.shared_types.verification_engine import (
     DeforestationCheckCreate,
     FieldVerificationCheckCreate,
     YieldLicenceCheckCreate,

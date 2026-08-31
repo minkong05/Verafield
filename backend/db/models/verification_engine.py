@@ -19,7 +19,7 @@ from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.db.base import Base
-from shared_types.enums import DeforestationStatus, FieldVerificationStatus
+from packages.shared_types.enums import DeforestationStatus, FieldVerificationStatus
 
 if TYPE_CHECKING:
     from backend.db.models.household import Household
