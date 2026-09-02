@@ -12,8 +12,8 @@ from backend.services.verification_engine.service import (
     get_plot_by_id,
     household_is_cleared,
 )
-from shared_types.enums import NoMixingStatus
-from shared_types.evidence_pack import (
+from packages.shared_types.enums import NoMixingStatus
+from packages.shared_types.evidence_pack import (
     BatchCreate,
     EvidencePackAssembly,
     EvidencePackCreate,

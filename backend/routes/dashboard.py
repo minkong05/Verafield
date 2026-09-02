@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from backend.db.session import get_db
 from backend.services.dashboard import service
-from shared_types import MillDashboardSupplier
+from packages.shared_types import MillDashboardSupplier
 
 router = APIRouter(prefix="/mills/{mill_id}/dashboard", tags=["dashboard"])
 
