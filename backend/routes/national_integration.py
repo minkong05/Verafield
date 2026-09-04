@@ -6,8 +6,8 @@ from sqlalchemy.orm import Session
 from backend.db.session import get_db
 from backend.services.gap_assessment.service import HouseholdNotFoundError
 from backend.services.national_integration import service
-from shared_types import NationalSystemsLookup as NationalSystemsLookupSchema
-from shared_types import NationalSystemsLookupCreate
+from packages.shared_types import NationalSystemsLookup as NationalSystemsLookupSchema
+from packages.shared_types import NationalSystemsLookupCreate
 
 router = APIRouter(
     prefix="/mills/{mill_id}/households/{household_id}", tags=["national-integration"]
