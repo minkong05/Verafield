@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from backend.db.session import get_db
-from backend.routes.dependencies import authorize_mill
+from backend.routes.dependencies import require_admin, validate_mill
 from backend.services.gap_assessment.service import HouseholdNotFoundError
 from backend.services.national_integration import service
 from packages.shared_types import NationalSystemsLookup as NationalSystemsLookupSchema
@@ -13,7 +13,7 @@ from packages.shared_types import NationalSystemsLookupCreate
 router = APIRouter(
     prefix="/mills/{mill_id}/households/{household_id}",
     tags=["national-integration"],
-    dependencies=[Depends(authorize_mill)],
+    dependencies=[Depends(require_admin), Depends(validate_mill)],
 )
 
 

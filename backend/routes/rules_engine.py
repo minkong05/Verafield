@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from backend.db.session import get_db
-from backend.routes.dependencies import authorize_mill, get_current_user
+from backend.routes.dependencies import get_current_user, require_admin, validate_mill
 from backend.services.gap_assessment.service import HouseholdNotFoundError
 from backend.services.rules_engine import service
 from packages.shared_types import LandDocumentRule as LandDocumentRuleSchema
@@ -37,7 +37,7 @@ def read_land_document_rule(
     "/mills/{mill_id}/households/{household_id}/land-ownership-assessment",
     response_model=LandOwnershipAssessmentSchema,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(authorize_mill)],
+    dependencies=[Depends(require_admin), Depends(validate_mill)],
 )
 def create_land_ownership_assessment(
     mill_id: uuid.UUID,
@@ -59,7 +59,7 @@ def create_land_ownership_assessment(
 @router.get(
     "/mills/{mill_id}/households/{household_id}/land-ownership-assessment",
     response_model=LandOwnershipAssessmentSchema,
-    dependencies=[Depends(authorize_mill)],
+    dependencies=[Depends(require_admin), Depends(validate_mill)],
 )
 def read_land_ownership_assessment(
     mill_id: uuid.UUID, household_id: uuid.UUID, db: Session = Depends(get_db)

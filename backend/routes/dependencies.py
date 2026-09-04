@@ -34,8 +34,11 @@ def validate_mill(mill_id: uuid.UUID, db: Session = Depends(get_db)) -> Mill:
     endpoint receives: one indexed primary-key lookup, no second connection
     and no second transaction.
 
-    Not attached to routes directly any more — authorize_mill wraps it, and
-    is what the mill-scoped routers depend on."""
+    Used two ways. Mill-facing routers depend on authorize_mill, which wraps
+    it. Admin-only mill-scoped routers pair it with require_admin instead:
+    require_admin settles who the caller is but never looks at the path, so
+    without this a bogus mill_id would reach the service layer and surface as
+    a foreign-key error rather than a 404."""
     try:
         return mill_service.get_mill(db, mill_id)
     except mill_service.MillNotFoundError as exc:

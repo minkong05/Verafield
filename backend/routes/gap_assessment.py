@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from backend.db.session import get_db
-from backend.routes.dependencies import authorize_mill
+from backend.routes.dependencies import require_admin, validate_mill
 from backend.services.gap_assessment import service
 from packages.shared_types import GapAssessment as GapAssessmentSchema
 from packages.shared_types import GapAssessmentCreate
@@ -12,7 +12,7 @@ from packages.shared_types import GapAssessmentCreate
 router = APIRouter(
     prefix="/mills/{mill_id}/households/{household_id}",
     tags=["gap-assessment"],
-    dependencies=[Depends(authorize_mill)],
+    dependencies=[Depends(require_admin), Depends(validate_mill)],
 )
 
 
