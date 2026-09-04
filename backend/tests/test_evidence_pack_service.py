@@ -167,8 +167,9 @@ def test_compute_no_mixing_status_returns_mixed_sources_for_two_distinct_plots()
     assert status.value == "mixed_sources"
 
 
-def test_household_is_cleared_returns_true_when_all_checks_present_and_cleared(db_session) -> None:
-    mill_id = uuid.uuid4()
+def test_household_is_cleared_returns_true_when_all_checks_present_and_cleared(
+    db_session, mill_id
+) -> None:
     household = _make_household(db_session, mill_id)
     plot = _make_plot(db_session, mill_id, household.id)
     _clear_household(db_session, mill_id, household.id, plot.id)
@@ -177,9 +178,8 @@ def test_household_is_cleared_returns_true_when_all_checks_present_and_cleared(d
 
 
 def test_household_is_cleared_returns_false_when_a_plot_has_no_deforestation_check(
-    db_session,
+    db_session, mill_id
 ) -> None:
-    mill_id = uuid.uuid4()
     household = _make_household(db_session, mill_id)
     plot = _make_plot(db_session, mill_id, household.id)
     _make_field_verification_check(db_session, mill_id, plot.id, FieldVerificationStatus.CLEARED)
@@ -190,9 +190,8 @@ def test_household_is_cleared_returns_false_when_a_plot_has_no_deforestation_che
 
 
 def test_household_is_cleared_returns_false_when_a_plot_has_no_field_verification_check(
-    db_session,
+    db_session, mill_id
 ) -> None:
-    mill_id = uuid.uuid4()
     household = _make_household(db_session, mill_id)
     plot = _make_plot(db_session, mill_id, household.id)
     _make_deforestation_check(db_session, mill_id, plot.id, DeforestationStatus.COMPLIANT)
@@ -203,9 +202,8 @@ def test_household_is_cleared_returns_false_when_a_plot_has_no_field_verificatio
 
 
 def test_household_is_cleared_returns_false_when_a_deforestation_check_is_needs_review(
-    db_session,
+    db_session, mill_id
 ) -> None:
-    mill_id = uuid.uuid4()
     household = _make_household(db_session, mill_id)
     plot = _make_plot(db_session, mill_id, household.id)
     _make_deforestation_check(db_session, mill_id, plot.id, DeforestationStatus.NEEDS_REVIEW)
@@ -217,9 +215,8 @@ def test_household_is_cleared_returns_false_when_a_deforestation_check_is_needs_
 
 
 def test_household_is_cleared_returns_false_when_a_field_verification_check_is_needs_review(
-    db_session,
+    db_session, mill_id
 ) -> None:
-    mill_id = uuid.uuid4()
     household = _make_household(db_session, mill_id)
     plot = _make_plot(db_session, mill_id, household.id)
     _make_deforestation_check(db_session, mill_id, plot.id, DeforestationStatus.COMPLIANT)
@@ -232,8 +229,9 @@ def test_household_is_cleared_returns_false_when_a_field_verification_check_is_n
     assert household_is_cleared(db_session, mill_id, household.id) is False
 
 
-def test_household_is_cleared_returns_false_when_yield_licence_check_is_missing(db_session) -> None:
-    mill_id = uuid.uuid4()
+def test_household_is_cleared_returns_false_when_yield_licence_check_is_missing(
+    db_session, mill_id
+) -> None:
     household = _make_household(db_session, mill_id)
     plot = _make_plot(db_session, mill_id, household.id)
     _make_deforestation_check(db_session, mill_id, plot.id, DeforestationStatus.COMPLIANT)
@@ -244,9 +242,8 @@ def test_household_is_cleared_returns_false_when_yield_licence_check_is_missing(
 
 
 def test_household_is_cleared_returns_false_when_yield_licence_check_is_needs_review(
-    db_session,
+    db_session, mill_id
 ) -> None:
-    mill_id = uuid.uuid4()
     household = _make_household(db_session, mill_id)
     plot = _make_plot(db_session, mill_id, household.id)
     _make_deforestation_check(db_session, mill_id, plot.id, DeforestationStatus.COMPLIANT)
@@ -260,9 +257,8 @@ def test_household_is_cleared_returns_false_when_yield_licence_check_is_needs_re
 
 
 def test_household_is_cleared_returns_false_when_land_ownership_assessment_is_missing(
-    db_session,
+    db_session, mill_id
 ) -> None:
-    mill_id = uuid.uuid4()
     household = _make_household(db_session, mill_id)
     plot = _make_plot(db_session, mill_id, household.id)
     _make_deforestation_check(db_session, mill_id, plot.id, DeforestationStatus.COMPLIANT)
@@ -273,9 +269,8 @@ def test_household_is_cleared_returns_false_when_land_ownership_assessment_is_mi
 
 
 def test_household_is_cleared_returns_false_when_land_ownership_assessment_is_not_cleared(
-    db_session,
+    db_session, mill_id
 ) -> None:
-    mill_id = uuid.uuid4()
     household = _make_household(db_session, mill_id)
     plot = _make_plot(db_session, mill_id, household.id)
     _make_deforestation_check(db_session, mill_id, plot.id, DeforestationStatus.COMPLIANT)
@@ -288,8 +283,9 @@ def test_household_is_cleared_returns_false_when_land_ownership_assessment_is_no
     assert household_is_cleared(db_session, mill_id, household.id) is False
 
 
-def test_household_is_cleared_returns_false_when_one_of_two_plots_is_unresolved(db_session) -> None:
-    mill_id = uuid.uuid4()
+def test_household_is_cleared_returns_false_when_one_of_two_plots_is_unresolved(
+    db_session, mill_id
+) -> None:
     household = _make_household(db_session, mill_id)
     plot_a = _make_plot(db_session, mill_id, household.id)
     _make_plot(db_session, mill_id, household.id)  # deliberately left with no checks at all

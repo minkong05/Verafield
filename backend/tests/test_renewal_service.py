@@ -139,18 +139,16 @@ def test_add_one_year_from_feb_29_falls_back_to_mar_1_in_non_leap_target_year() 
 
 
 def test_get_latest_evidence_pack_generated_at_returns_none_with_no_evidence_pack(
-    db_session,
+    db_session, mill_id
 ) -> None:
-    mill_id = uuid.uuid4()
     household = _make_household(db_session, mill_id)
 
     assert get_latest_evidence_pack_generated_at(db_session, mill_id, household.id) is None
 
 
 def test_get_latest_evidence_pack_generated_at_returns_generated_at_of_single_pack(
-    db_session,
+    db_session, mill_id
 ) -> None:
-    mill_id = uuid.uuid4()
     household = _make_household(db_session, mill_id)
     plot = _make_plot(db_session, mill_id, household.id)
     generated_at = datetime(2025, 3, 1, 8, 0, tzinfo=UTC)
@@ -163,9 +161,8 @@ def test_get_latest_evidence_pack_generated_at_returns_generated_at_of_single_pa
 
 
 def test_get_latest_evidence_pack_generated_at_returns_max_across_multiple_batches(
-    db_session,
+    db_session, mill_id
 ) -> None:
-    mill_id = uuid.uuid4()
     household = _make_household(db_session, mill_id)
     plot = _make_plot(db_session, mill_id, household.id)
     earlier = datetime(2025, 1, 1, 0, 0, tzinfo=UTC)
@@ -178,9 +175,9 @@ def test_get_latest_evidence_pack_generated_at_returns_max_across_multiple_batch
     assert get_latest_evidence_pack_generated_at(db_session, mill_id, household.id) == later
 
 
-def test_get_latest_evidence_pack_generated_at_is_scoped_by_mill(db_session) -> None:
-    mill_a = uuid.uuid4()
-    mill_b = uuid.uuid4()
+def test_get_latest_evidence_pack_generated_at_is_scoped_by_mill(db_session, register_mill) -> None:
+    mill_a = register_mill()
+    mill_b = register_mill()
     household_a = _make_household(db_session, mill_a)
     plot_a = _make_plot(db_session, mill_a, household_a.id)
     _give_household_an_evidence_pack(db_session, mill_a, household_a.id, plot_a.id)
@@ -191,15 +188,13 @@ def test_get_latest_evidence_pack_generated_at_is_scoped_by_mill(db_session) -> 
 # --- compute_renewal_due_at --------------------------------------------------
 
 
-def test_compute_renewal_due_at_is_none_with_no_evidence_pack(db_session) -> None:
-    mill_id = uuid.uuid4()
+def test_compute_renewal_due_at_is_none_with_no_evidence_pack(db_session, mill_id) -> None:
     household = _make_household(db_session, mill_id)
 
     assert compute_renewal_due_at(db_session, mill_id, household.id) is None
 
 
-def test_compute_renewal_due_at_is_one_year_after_generated_at(db_session) -> None:
-    mill_id = uuid.uuid4()
+def test_compute_renewal_due_at_is_one_year_after_generated_at(db_session, mill_id) -> None:
     household = _make_household(db_session, mill_id)
     plot = _make_plot(db_session, mill_id, household.id)
     generated_at = datetime(2026, 5, 10, 12, 0, tzinfo=UTC)
@@ -212,8 +207,7 @@ def test_compute_renewal_due_at_is_one_year_after_generated_at(db_session) -> No
     )
 
 
-def test_compute_renewal_due_at_leap_day_edge_case(db_session) -> None:
-    mill_id = uuid.uuid4()
+def test_compute_renewal_due_at_leap_day_edge_case(db_session, mill_id) -> None:
     household = _make_household(db_session, mill_id)
     plot = _make_plot(db_session, mill_id, household.id)
     generated_at = datetime(2024, 2, 29, 7, 0, tzinfo=UTC)
@@ -229,15 +223,13 @@ def test_compute_renewal_due_at_leap_day_edge_case(db_session) -> None:
 # --- household_renewal_is_lapsed --------------------------------------------
 
 
-def test_household_renewal_is_lapsed_is_false_with_no_evidence_pack(db_session) -> None:
-    mill_id = uuid.uuid4()
+def test_household_renewal_is_lapsed_is_false_with_no_evidence_pack(db_session, mill_id) -> None:
     household = _make_household(db_session, mill_id)
 
     assert household_renewal_is_lapsed(db_session, mill_id, household.id) is False
 
 
-def test_household_renewal_is_lapsed_is_false_before_due_date(db_session) -> None:
-    mill_id = uuid.uuid4()
+def test_household_renewal_is_lapsed_is_false_before_due_date(db_session, mill_id) -> None:
     household = _make_household(db_session, mill_id)
     plot = _make_plot(db_session, mill_id, household.id)
     generated_at = datetime(2026, 1, 1, 0, 0, tzinfo=UTC)
@@ -254,8 +246,9 @@ def test_household_renewal_is_lapsed_is_false_before_due_date(db_session) -> Non
     )
 
 
-def test_household_renewal_is_lapsed_is_false_one_microsecond_before_due_date(db_session) -> None:
-    mill_id = uuid.uuid4()
+def test_household_renewal_is_lapsed_is_false_one_microsecond_before_due_date(
+    db_session, mill_id
+) -> None:
     household = _make_household(db_session, mill_id)
     plot = _make_plot(db_session, mill_id, household.id)
     generated_at = datetime(2026, 1, 1, 0, 0, tzinfo=UTC)
@@ -272,8 +265,7 @@ def test_household_renewal_is_lapsed_is_false_one_microsecond_before_due_date(db
     )
 
 
-def test_household_renewal_is_lapsed_is_true_exactly_at_due_date(db_session) -> None:
-    mill_id = uuid.uuid4()
+def test_household_renewal_is_lapsed_is_true_exactly_at_due_date(db_session, mill_id) -> None:
     household = _make_household(db_session, mill_id)
     plot = _make_plot(db_session, mill_id, household.id)
     generated_at = datetime(2026, 1, 1, 0, 0, tzinfo=UTC)
@@ -285,8 +277,7 @@ def test_household_renewal_is_lapsed_is_true_exactly_at_due_date(db_session) -> 
     assert household_renewal_is_lapsed(db_session, mill_id, household.id, as_of=due_at) is True
 
 
-def test_household_renewal_is_lapsed_is_true_after_due_date(db_session) -> None:
-    mill_id = uuid.uuid4()
+def test_household_renewal_is_lapsed_is_true_after_due_date(db_session, mill_id) -> None:
     household = _make_household(db_session, mill_id)
     plot = _make_plot(db_session, mill_id, household.id)
     generated_at = datetime(2026, 1, 1, 0, 0, tzinfo=UTC)
@@ -307,9 +298,9 @@ def test_get_household_renewal_status_raises_for_unknown_household(db_session) -
         get_household_renewal_status(db_session, uuid.uuid4(), uuid.uuid4())
 
 
-def test_get_household_renewal_status_is_scoped_by_mill(db_session) -> None:
-    mill_a = uuid.uuid4()
-    mill_b = uuid.uuid4()
+def test_get_household_renewal_status_is_scoped_by_mill(db_session, register_mill) -> None:
+    mill_a = register_mill()
+    mill_b = register_mill()
     household_a = _make_household(db_session, mill_a)
 
     with pytest.raises(HouseholdNotFoundError):
@@ -317,9 +308,8 @@ def test_get_household_renewal_status_is_scoped_by_mill(db_session) -> None:
 
 
 def test_get_household_renewal_status_with_no_evidence_pack_has_null_fields_and_not_lapsed(
-    db_session,
+    db_session, mill_id
 ) -> None:
-    mill_id = uuid.uuid4()
     household = _make_household(db_session, mill_id)
 
     result = get_household_renewal_status(db_session, mill_id, household.id)
@@ -329,8 +319,9 @@ def test_get_household_renewal_status_with_no_evidence_pack_has_null_fields_and_
     assert result.lapsed is False
 
 
-def test_get_household_renewal_status_reflects_due_date_and_lapsed_flag(db_session) -> None:
-    mill_id = uuid.uuid4()
+def test_get_household_renewal_status_reflects_due_date_and_lapsed_flag(
+    db_session, mill_id
+) -> None:
     household = _make_household(db_session, mill_id)
     plot = _make_plot(db_session, mill_id, household.id)
     generated_at = datetime(2024, 1, 1, 0, 0, tzinfo=UTC)
@@ -350,9 +341,9 @@ def test_get_household_renewal_status_reflects_due_date_and_lapsed_flag(db_sessi
 # --- list_mill_renewal_status ------------------------------------------------
 
 
-def test_list_mill_renewal_status_scopes_by_mill_id(db_session) -> None:
-    mill_a = uuid.uuid4()
-    mill_b = uuid.uuid4()
+def test_list_mill_renewal_status_scopes_by_mill_id(db_session, register_mill) -> None:
+    mill_a = register_mill()
+    mill_b = register_mill()
     household_a = _make_household(db_session, mill_a)
     _make_household(db_session, mill_b)
 
@@ -362,9 +353,8 @@ def test_list_mill_renewal_status_scopes_by_mill_id(db_session) -> None:
 
 
 def test_list_mill_renewal_status_includes_households_with_and_without_evidence_packs(
-    db_session,
+    db_session, mill_id
 ) -> None:
-    mill_id = uuid.uuid4()
     pending_household = _make_household(db_session, mill_id)
     cleared_household = _make_household(db_session, mill_id)
     plot = _make_plot(db_session, mill_id, cleared_household.id)

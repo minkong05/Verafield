@@ -117,9 +117,41 @@ pytest -k name  # run only tests matching "name"
 
 Tests live under `backend/tests/`, mirroring the module they test (e.g. `backend/routes/health.py` → `backend/tests/test_health.py`). Most run against the FastAPI app directly via `TestClient` and don't need a database (`test_health.py`, `test_gap_assessment_service.py`, `test_shared_types_gap_assessment.py`).
 
-Tests that touch the database (`test_household.py`, `test_gap_assessment.py`, `test_rules_engine.py`, `test_labour_declaration.py`, `test_verification_engine.py`, `test_db_models.py`) need a reachable Postgres, per the note in `backend/db/README.md` about not mocking the DB layer — start one with `docker compose up -d db` first. They run against a separate `tapak_test` database (auto-created on first run, isolated from whatever's in your local `tapak` dev database), migrated with real Alembic migrations rather than `Base.metadata.create_all()` so the migration files themselves are exercised, not just the ORM models. Point them elsewhere with `TEST_DATABASE_URL` if needed; it defaults to `postgresql+psycopg://tapak:tapak@localhost:5432/tapak_test`.
+Tests that touch the database (`test_household.py`, `test_gap_assessment.py`, `test_rules_engine.py`, `test_labour_declaration.py`, `test_verification_engine.py`, `test_db_models.py`, `test_mill.py`, `test_auth.py`, `test_authz.py`, `test_user.py`, `test_cli.py`) need a reachable Postgres, per the note in `backend/db/README.md` about not mocking the DB layer — start one with `docker compose up -d db` first. They run against a separate `tapak_test` database (auto-created on first run, isolated from whatever's in your local `tapak` dev database), migrated with real Alembic migrations rather than `Base.metadata.create_all()` so the migration files themselves are exercised, not just the ORM models. Point them elsewhere with `TEST_DATABASE_URL` if needed; it defaults to `postgresql+psycopg://tapak:tapak@localhost:5432/tapak_test`.
+
+The shared `client` fixture is authenticated as an admin by default, so the Features 01–09 suites test what they were written to test rather than re-testing authorization in every assertion. `anon_client` (no credential) and `mill_client(mill_id)` (a mill user) exist for the cases that are about authorization; `test_authz.py` is where the mill-user path is actually exercised.
 
 You may see a `StarletteDeprecationWarning` about `httpx2` when running tests — that's expected on current FastAPI/Starlette versions and safe to ignore for now.
+
+## Authentication
+
+Every endpoint except `GET /health` needs a bearer token, so a fresh database
+needs one account before the API is usable. `POST /users` itself requires an
+admin, so the first one comes from a CLI rather than the API:
+
+```bash
+# JWT_SECRET_KEY must be set (it is in .env.example) — it has no default in
+# code, and is rejected below 32 bytes per RFC 7518 section 3.2.
+python -m backend.cli create-admin --email you@tapak.my --password '<12+ chars>'
+
+# or, to keep the secret out of your shell history:
+TAPAK_ADMIN_PASSWORD='<12+ chars>' python -m backend.cli create-admin --email you@tapak.my
+```
+
+Then log in and use the token:
+
+```bash
+TOKEN=$(curl -s -X POST http://localhost:8000/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"you@tapak.my","password":"<12+ chars>"}' | jq -r .access_token)
+
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/mills
+```
+
+An admin can reach any mill; a mill user can reach only its own and gets 403
+for any other `mill_id` — including one that isn't registered, so it can't
+probe which mill ids exist. Generate a real secret per environment with
+`openssl rand -hex 32`; the value in `.env.example` is for local dev only.
 
 ## Adding a dependency
 

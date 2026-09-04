@@ -9,12 +9,14 @@ from backend.db.models.evidence_pack import Batch, BatchPlot, EvidencePack
 from backend.db.models.gap_assessment import GapAssessment, GapAssessmentItem
 from backend.db.models.household import Household
 from backend.db.models.labour_declaration import ConsentRecord, LabourDeclaration
+from backend.db.models.mill import Mill
 from backend.db.models.plot import Plot
 from backend.db.models.rules_engine import (
     LandDocumentRule,
     LandOwnershipAssessment,
     LandOwnershipDocument,
 )
+from backend.db.models.user import User
 from backend.db.models.verification_engine import (
     DeforestationCheck,
     FieldVerificationCheck,
@@ -31,6 +33,7 @@ from shared_types.enums import (
     MalaysiaState,
     NoMixingStatus,
     SignatureMethod,
+    UserRole,
 )
 
 
@@ -48,6 +51,32 @@ def _make_household(db_session, mill_id: uuid.UUID) -> Household:
     return household
 
 
+def _make_mill(mpob_licence_number: str) -> Mill:
+    return Mill(
+        name="Kilang Sawit Tawau",
+        mpob_licence_number=mpob_licence_number,
+        postal_address="KM 12, Jalan Apas, 91000 Tawau, Sabah",
+        email="ops@kilang-tawau.example",
+        district="Tawau",
+        state=MalaysiaState.SABAH,
+    )
+
+
+def _make_batch_unsaved(mill_id: uuid.UUID) -> Batch:
+    return Batch(
+        mill_id=mill_id,
+        product_description="Crude palm oil",
+        trade_name="CPO",
+        hs_code="1511.10",
+        net_mass_kg=Decimal("20000.00"),
+        recipient_name="Rotterdam Refinery BV",
+        recipient_postal_address="Havenstraat 1, Rotterdam",
+        recipient_email="intake@rotterdam-refinery.example",
+        no_mixing_status=NoMixingStatus.SINGLE_SOURCE,
+        created_by="Analyst Bakar",
+    )
+
+
 def _get_seeded_rule(db_session, state: MalaysiaState, land_type: LandType) -> LandDocumentRule:
     return (
         db_session.query(LandDocumentRule)
@@ -56,11 +85,88 @@ def _get_seeded_rule(db_session, state: MalaysiaState, land_type: LandType) -> L
     )
 
 
-def test_gap_assessment_mill_id_must_match_household_mill_id(db_session) -> None:
-    household = _make_household(db_session, mill_id=uuid.uuid4())
+def _make_user(role: UserRole, mill_id: uuid.UUID | None, email: str = "a@tapak.example") -> User:
+    return User(email=email, password_hash="not-a-real-hash", role=role, mill_id=mill_id)
+
+
+def test_admin_user_must_not_be_bound_to_a_mill(db_session, mill_id) -> None:
+    """ck_users_role_mill_id, in the direction the service also checks — the
+    constraint is the guarantee, the service check is only a better error."""
+    db_session.add(_make_user(UserRole.ADMIN, mill_id))
+
+    with pytest.raises(IntegrityError):
+        db_session.commit()
+
+
+def test_mill_user_must_be_bound_to_a_mill(db_session) -> None:
+    db_session.add(_make_user(UserRole.MILL_USER, None))
+
+    with pytest.raises(IntegrityError):
+        db_session.commit()
+
+
+def test_user_mill_id_must_reference_a_registered_mill(db_session) -> None:
+    db_session.add(_make_user(UserRole.MILL_USER, uuid.uuid4()))
+
+    with pytest.raises(IntegrityError):
+        db_session.commit()
+
+
+def test_user_email_must_be_unique(db_session) -> None:
+    db_session.add(_make_user(UserRole.ADMIN, None))
+    db_session.commit()
+
+    db_session.add(_make_user(UserRole.ADMIN, None))
+
+    with pytest.raises(IntegrityError):
+        db_session.commit()
+
+
+def test_household_mill_id_must_reference_a_registered_mill(db_session) -> None:
+    """The identity half of tenancy: before Feature 10 any UUID silently
+    became a new tenant."""
+    db_session.add(
+        Household(
+            mill_id=uuid.uuid4(),
+            name="Ahmad bin Ismail",
+            postal_address="Lot 12, Jalan Kebun, 91000 Tawau, Sabah",
+            email="ahmad.ismail@example.com",
+            district="Tawau",
+        )
+    )
+
+    with pytest.raises(IntegrityError):
+        db_session.commit()
+
+
+def test_batch_mill_id_must_reference_a_registered_mill(db_session) -> None:
+    """batches is the second tenant root: it reaches mills only through its
+    own foreign key, never transitively through batch_plots."""
+    db_session.add(_make_batch_unsaved(uuid.uuid4()))
+
+    with pytest.raises(IntegrityError):
+        db_session.commit()
+
+
+def test_mill_mpob_licence_number_must_be_unique(db_session) -> None:
+    """The anti-duplicate-tenant guard: re-registering the same mill must not
+    mint a second tenant."""
+    db_session.add(_make_mill("MPOB-500123456"))
+    db_session.commit()
+
+    db_session.add(_make_mill("MPOB-500123456"))
+
+    with pytest.raises(IntegrityError):
+        db_session.commit()
+
+
+def test_gap_assessment_mill_id_must_match_household_mill_id(
+    db_session, mill_id, register_mill
+) -> None:
+    household = _make_household(db_session, mill_id=mill_id)
 
     mismatched_assessment = GapAssessment(
-        mill_id=uuid.uuid4(),  # deliberately not household.mill_id
+        mill_id=register_mill(),  # deliberately not household.mill_id
         household_id=household.id,
         assessed_by="Officer Aiman",
     )
@@ -70,8 +176,7 @@ def test_gap_assessment_mill_id_must_match_household_mill_id(db_session) -> None
         db_session.commit()
 
 
-def test_gap_assessment_item_category_must_be_unique_per_assessment(db_session) -> None:
-    mill_id = uuid.uuid4()
+def test_gap_assessment_item_category_must_be_unique_per_assessment(db_session, mill_id) -> None:
     household = _make_household(db_session, mill_id=mill_id)
     assessment = GapAssessment(
         mill_id=mill_id, household_id=household.id, assessed_by="Officer Aiman"
@@ -101,8 +206,7 @@ def test_gap_assessment_item_category_must_be_unique_per_assessment(db_session) 
         db_session.commit()
 
 
-def test_household_can_have_at_most_one_gap_assessment(db_session) -> None:
-    mill_id = uuid.uuid4()
+def test_household_can_have_at_most_one_gap_assessment(db_session, mill_id) -> None:
     household = _make_household(db_session, mill_id=mill_id)
     db_session.add(
         GapAssessment(mill_id=mill_id, household_id=household.id, assessed_by="Officer A")
@@ -117,8 +221,9 @@ def test_household_can_have_at_most_one_gap_assessment(db_session) -> None:
         db_session.commit()
 
 
-def test_land_ownership_document_mill_id_must_match_assessment_mill_id(db_session) -> None:
-    mill_id = uuid.uuid4()
+def test_land_ownership_document_mill_id_must_match_assessment_mill_id(
+    db_session, mill_id, register_mill
+) -> None:
     household = _make_household(db_session, mill_id=mill_id)
     rule = _get_seeded_rule(db_session, MalaysiaState.SABAH, LandType.NATIVE_TITLE)
     assessment = LandOwnershipAssessment(
@@ -135,7 +240,7 @@ def test_land_ownership_document_mill_id_must_match_assessment_mill_id(db_sessio
     db_session.refresh(assessment)
 
     mismatched_document = LandOwnershipDocument(
-        mill_id=uuid.uuid4(),  # deliberately not assessment.mill_id
+        mill_id=register_mill(),  # deliberately not assessment.mill_id
         assessment_id=assessment.id,
         document_type=DocumentType.SABAH_NATIVE_TITLE,
     )
@@ -145,8 +250,7 @@ def test_land_ownership_document_mill_id_must_match_assessment_mill_id(db_sessio
         db_session.commit()
 
 
-def test_household_can_have_at_most_one_land_ownership_assessment(db_session) -> None:
-    mill_id = uuid.uuid4()
+def test_household_can_have_at_most_one_land_ownership_assessment(db_session, mill_id) -> None:
     household = _make_household(db_session, mill_id=mill_id)
     rule = _get_seeded_rule(db_session, MalaysiaState.SABAH, LandType.NATIVE_TITLE)
     db_session.add(
@@ -178,11 +282,13 @@ def test_household_can_have_at_most_one_land_ownership_assessment(db_session) ->
         db_session.commit()
 
 
-def test_labour_declaration_mill_id_must_match_household_mill_id(db_session) -> None:
-    household = _make_household(db_session, mill_id=uuid.uuid4())
+def test_labour_declaration_mill_id_must_match_household_mill_id(
+    db_session, mill_id, register_mill
+) -> None:
+    household = _make_household(db_session, mill_id=mill_id)
 
     mismatched_declaration = LabourDeclaration(
-        mill_id=uuid.uuid4(),  # deliberately not household.mill_id
+        mill_id=register_mill(),  # deliberately not household.mill_id
         household_id=household.id,
         labour_arrangement_description="Family-run smallholding, no hired labour",
         no_child_labour_confirmed=True,
@@ -197,8 +303,7 @@ def test_labour_declaration_mill_id_must_match_household_mill_id(db_session) -> 
         db_session.commit()
 
 
-def test_household_can_have_at_most_one_labour_declaration(db_session) -> None:
-    mill_id = uuid.uuid4()
+def test_household_can_have_at_most_one_labour_declaration(db_session, mill_id) -> None:
     household = _make_household(db_session, mill_id=mill_id)
     db_session.add(
         LabourDeclaration(
@@ -231,11 +336,13 @@ def test_household_can_have_at_most_one_labour_declaration(db_session) -> None:
         db_session.commit()
 
 
-def test_consent_record_mill_id_must_match_household_mill_id(db_session) -> None:
-    household = _make_household(db_session, mill_id=uuid.uuid4())
+def test_consent_record_mill_id_must_match_household_mill_id(
+    db_session, mill_id, register_mill
+) -> None:
+    household = _make_household(db_session, mill_id=mill_id)
 
     mismatched_consent = ConsentRecord(
-        mill_id=uuid.uuid4(),  # deliberately not household.mill_id
+        mill_id=register_mill(),  # deliberately not household.mill_id
         household_id=household.id,
         mykad_last4="1234",
         signature_method=SignatureMethod.SIGNATURE,
@@ -248,8 +355,7 @@ def test_consent_record_mill_id_must_match_household_mill_id(db_session) -> None
         db_session.commit()
 
 
-def test_household_can_have_at_most_one_consent_record(db_session) -> None:
-    mill_id = uuid.uuid4()
+def test_household_can_have_at_most_one_consent_record(db_session, mill_id) -> None:
     household = _make_household(db_session, mill_id=mill_id)
     db_session.add(
         ConsentRecord(
@@ -295,11 +401,11 @@ def _make_plot(db_session, mill_id: uuid.UUID, household_id: uuid.UUID) -> Plot:
     return plot
 
 
-def test_plot_mill_id_must_match_household_mill_id(db_session) -> None:
-    household = _make_household(db_session, mill_id=uuid.uuid4())
+def test_plot_mill_id_must_match_household_mill_id(db_session, mill_id, register_mill) -> None:
+    household = _make_household(db_session, mill_id=mill_id)
 
     mismatched_plot = Plot(
-        mill_id=uuid.uuid4(),  # deliberately not household.mill_id
+        mill_id=register_mill(),  # deliberately not household.mill_id
         household_id=household.id,
         polygon=[[117.0, 4.0], [117.1, 4.0], [117.1, 4.1]],
         centroid_lat=Decimal("4.05"),
@@ -314,21 +420,21 @@ def test_plot_mill_id_must_match_household_mill_id(db_session) -> None:
         db_session.commit()
 
 
-def test_household_can_have_more_than_one_plot(db_session) -> None:
-    mill_id = uuid.uuid4()
+def test_household_can_have_more_than_one_plot(db_session, mill_id) -> None:
     household = _make_household(db_session, mill_id=mill_id)
     _make_plot(db_session, mill_id, household.id)
 
     _make_plot(db_session, mill_id, household.id)  # does not raise
 
 
-def test_deforestation_check_mill_id_must_match_plot_mill_id(db_session) -> None:
-    mill_id = uuid.uuid4()
+def test_deforestation_check_mill_id_must_match_plot_mill_id(
+    db_session, mill_id, register_mill
+) -> None:
     household = _make_household(db_session, mill_id=mill_id)
     plot = _make_plot(db_session, mill_id, household.id)
 
     mismatched_check = DeforestationCheck(
-        mill_id=uuid.uuid4(),  # deliberately not plot.mill_id
+        mill_id=register_mill(),  # deliberately not plot.mill_id
         plot_id=plot.id,
         forest_area_ha=Decimal("1.2"),
         tree_height_m=Decimal("8"),
@@ -346,8 +452,7 @@ def test_deforestation_check_mill_id_must_match_plot_mill_id(db_session) -> None
         db_session.commit()
 
 
-def test_plot_can_have_at_most_one_deforestation_check(db_session) -> None:
-    mill_id = uuid.uuid4()
+def test_plot_can_have_at_most_one_deforestation_check(db_session, mill_id) -> None:
     household = _make_household(db_session, mill_id=mill_id)
     plot = _make_plot(db_session, mill_id, household.id)
     db_session.add(
@@ -424,8 +529,7 @@ def _make_field_verification_check(
     return FieldVerificationCheck(**defaults)
 
 
-def test_field_verification_check_mill_id_must_match_plot_mill_id(db_session) -> None:
-    mill_id = uuid.uuid4()
+def test_field_verification_check_mill_id_must_match_plot_mill_id(db_session, mill_id) -> None:
     household = _make_household(db_session, mill_id=mill_id)
     plot = _make_plot(db_session, mill_id, household.id)
 
@@ -439,8 +543,7 @@ def test_field_verification_check_mill_id_must_match_plot_mill_id(db_session) ->
         db_session.commit()
 
 
-def test_plot_can_have_at_most_one_field_verification_check(db_session) -> None:
-    mill_id = uuid.uuid4()
+def test_plot_can_have_at_most_one_field_verification_check(db_session, mill_id) -> None:
     household = _make_household(db_session, mill_id=mill_id)
     plot = _make_plot(db_session, mill_id, household.id)
     db_session.add(_make_field_verification_check(mill_id, plot.id, recorded_by="Officer A"))
@@ -471,12 +574,14 @@ def _make_yield_licence_check(
     return YieldLicenceCheck(**defaults)
 
 
-def test_yield_licence_check_mill_id_must_match_household_mill_id(db_session) -> None:
-    household = _make_household(db_session, mill_id=uuid.uuid4())
+def test_yield_licence_check_mill_id_must_match_household_mill_id(
+    db_session, mill_id, register_mill
+) -> None:
+    household = _make_household(db_session, mill_id=mill_id)
 
     mismatched_check = _make_yield_licence_check(
-        uuid.uuid4(),
-        household.id,  # deliberately not household.mill_id
+        register_mill(),  # deliberately not household.mill_id
+        household.id,
     )
     db_session.add(mismatched_check)
 
@@ -484,8 +589,7 @@ def test_yield_licence_check_mill_id_must_match_household_mill_id(db_session) ->
         db_session.commit()
 
 
-def test_household_can_have_at_most_one_yield_licence_check(db_session) -> None:
-    mill_id = uuid.uuid4()
+def test_household_can_have_at_most_one_yield_licence_check(db_session, mill_id) -> None:
     household = _make_household(db_session, mill_id=mill_id)
     db_session.add(_make_yield_licence_check(mill_id, household.id, recorded_by="Analyst A"))
     db_session.commit()
@@ -517,14 +621,13 @@ def _make_batch(db_session, mill_id: uuid.UUID, **overrides) -> Batch:
     return batch
 
 
-def test_batch_plot_mill_id_must_match_batch_mill_id(db_session) -> None:
-    mill_id = uuid.uuid4()
+def test_batch_plot_mill_id_must_match_batch_mill_id(db_session, mill_id, register_mill) -> None:
     household = _make_household(db_session, mill_id=mill_id)
     plot = _make_plot(db_session, mill_id, household.id)
     batch = _make_batch(db_session, mill_id)
 
     mismatched_batch_plot = BatchPlot(
-        mill_id=uuid.uuid4(),  # deliberately not batch.mill_id
+        mill_id=register_mill(),  # deliberately not batch.mill_id
         batch_id=batch.id,
         plot_id=plot.id,
         harvest_date=date(2026, 2, 1),
@@ -535,11 +638,10 @@ def test_batch_plot_mill_id_must_match_batch_mill_id(db_session) -> None:
         db_session.commit()
 
 
-def test_batch_plot_mill_id_must_match_plot_mill_id(db_session) -> None:
-    mill_id = uuid.uuid4()
+def test_batch_plot_mill_id_must_match_plot_mill_id(db_session, mill_id, register_mill) -> None:
     household = _make_household(db_session, mill_id=mill_id)
     plot = _make_plot(db_session, mill_id, household.id)
-    other_mill_id = uuid.uuid4()
+    other_mill_id = register_mill()
     batch = _make_batch(db_session, other_mill_id)
 
     mismatched_batch_plot = BatchPlot(
@@ -554,8 +656,7 @@ def test_batch_plot_mill_id_must_match_plot_mill_id(db_session) -> None:
         db_session.commit()
 
 
-def test_batch_plot_batch_and_plot_pair_must_be_unique(db_session) -> None:
-    mill_id = uuid.uuid4()
+def test_batch_plot_batch_and_plot_pair_must_be_unique(db_session, mill_id) -> None:
     household = _make_household(db_session, mill_id=mill_id)
     plot = _make_plot(db_session, mill_id, household.id)
     batch = _make_batch(db_session, mill_id)
@@ -576,12 +677,11 @@ def test_batch_plot_batch_and_plot_pair_must_be_unique(db_session) -> None:
         db_session.commit()
 
 
-def test_evidence_pack_mill_id_must_match_batch_mill_id(db_session) -> None:
-    mill_id = uuid.uuid4()
+def test_evidence_pack_mill_id_must_match_batch_mill_id(db_session, mill_id, register_mill) -> None:
     batch = _make_batch(db_session, mill_id)
 
     mismatched_pack = EvidencePack(
-        mill_id=uuid.uuid4(),  # deliberately not batch.mill_id
+        mill_id=register_mill(),  # deliberately not batch.mill_id
         batch_id=batch.id,
         assembled_data={},
         geojson={},
@@ -593,8 +693,7 @@ def test_evidence_pack_mill_id_must_match_batch_mill_id(db_session) -> None:
         db_session.commit()
 
 
-def test_batch_can_have_at_most_one_evidence_pack(db_session) -> None:
-    mill_id = uuid.uuid4()
+def test_batch_can_have_at_most_one_evidence_pack(db_session, mill_id) -> None:
     batch = _make_batch(db_session, mill_id)
     db_session.add(
         EvidencePack(

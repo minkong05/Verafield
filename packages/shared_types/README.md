@@ -15,3 +15,8 @@ Type/schema definitions mirroring `backend/db`'s core entities (Household, Plot,
 ## Depends on
 
 Nothing — this is the lowest-level package. Everything else depends on it.
+
+## Two entries worth knowing about
+
+- `mill.py` is the only module here whose read model has **no `mill_id` field** — `Mill.id` *is* the mill id.
+- `auth.py`'s `User` lists every field it exposes explicitly rather than mirroring the ORM row, so `from_attributes` can never surface `password_hash`. Don't refactor it into a wildcard.

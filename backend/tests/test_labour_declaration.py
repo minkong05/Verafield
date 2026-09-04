@@ -16,8 +16,7 @@ def _create_household(client, mill_id: uuid.UUID, name: str = "Ahmad bin Ismail"
     return response.json()["id"]
 
 
-def test_create_labour_declaration_returns_201(client) -> None:
-    mill_id = uuid.uuid4()
+def test_create_labour_declaration_returns_201(client, mill_id) -> None:
     household_id = _create_household(client, mill_id)
 
     response = client.post(
@@ -39,8 +38,7 @@ def test_create_labour_declaration_returns_201(client) -> None:
     assert body["no_child_labour_confirmed"] is True
 
 
-def test_create_labour_declaration_preserves_the_submitted_collected_at(client) -> None:
-    mill_id = uuid.uuid4()
+def test_create_labour_declaration_preserves_the_submitted_collected_at(client, mill_id) -> None:
     household_id = _create_household(client, mill_id)
     collected_at = datetime.now(UTC) - timedelta(days=3)
 
@@ -60,8 +58,7 @@ def test_create_labour_declaration_preserves_the_submitted_collected_at(client) 
     assert datetime.fromisoformat(response.json()["collected_at"]) == collected_at
 
 
-def test_create_labour_declaration_missing_collected_at_returns_422(client) -> None:
-    mill_id = uuid.uuid4()
+def test_create_labour_declaration_missing_collected_at_returns_422(client, mill_id) -> None:
     household_id = _create_household(client, mill_id)
 
     response = client.post(
@@ -78,8 +75,7 @@ def test_create_labour_declaration_missing_collected_at_returns_422(client) -> N
     assert response.status_code == 422
 
 
-def test_create_labour_declaration_twice_for_same_household_returns_409(client) -> None:
-    mill_id = uuid.uuid4()
+def test_create_labour_declaration_twice_for_same_household_returns_409(client, mill_id) -> None:
     household_id = _create_household(client, mill_id)
     payload = {
         "labour_arrangement_description": "Family-run smallholding, no hired labour",
@@ -103,8 +99,7 @@ def test_create_labour_declaration_twice_for_same_household_returns_409(client) 
     assert response.status_code == 409
 
 
-def test_create_labour_declaration_for_unknown_household_returns_404(client) -> None:
-    mill_id = uuid.uuid4()
+def test_create_labour_declaration_for_unknown_household_returns_404(client, mill_id) -> None:
 
     response = client.post(
         f"/mills/{mill_id}/households/{uuid.uuid4()}/labour-declaration",
@@ -121,17 +116,16 @@ def test_create_labour_declaration_for_unknown_household_returns_404(client) -> 
     assert response.status_code == 404
 
 
-def test_get_labour_declaration_for_unknown_household_returns_404(client) -> None:
-    mill_id = uuid.uuid4()
+def test_get_labour_declaration_for_unknown_household_returns_404(client, mill_id) -> None:
 
     response = client.get(f"/mills/{mill_id}/households/{uuid.uuid4()}/labour-declaration")
 
     assert response.status_code == 404
 
 
-def test_labour_declaration_is_not_visible_to_a_different_mill(client) -> None:
-    mill_a = uuid.uuid4()
-    mill_b = uuid.uuid4()
+def test_labour_declaration_is_not_visible_to_a_different_mill(client, register_mill) -> None:
+    mill_a = register_mill()
+    mill_b = register_mill()
     household_id = _create_household(client, mill_a)
     payload = {
         "labour_arrangement_description": "Family-run smallholding, no hired labour",
@@ -153,8 +147,7 @@ def test_labour_declaration_is_not_visible_to_a_different_mill(client) -> None:
     assert response.status_code == 404
 
 
-def test_create_consent_record_returns_201(client) -> None:
-    mill_id = uuid.uuid4()
+def test_create_consent_record_returns_201(client, mill_id) -> None:
     household_id = _create_household(client, mill_id)
 
     response = client.post(
@@ -175,8 +168,7 @@ def test_create_consent_record_returns_201(client) -> None:
     assert body["credit_referral_consent_given"] is True
 
 
-def test_create_consent_record_defaults_credit_referral_consent_to_false(client) -> None:
-    mill_id = uuid.uuid4()
+def test_create_consent_record_defaults_credit_referral_consent_to_false(client, mill_id) -> None:
     household_id = _create_household(client, mill_id)
 
     response = client.post(
@@ -193,8 +185,7 @@ def test_create_consent_record_defaults_credit_referral_consent_to_false(client)
     assert response.json()["credit_referral_consent_given"] is False
 
 
-def test_create_consent_record_with_invalid_mykad_last4_returns_422(client) -> None:
-    mill_id = uuid.uuid4()
+def test_create_consent_record_with_invalid_mykad_last4_returns_422(client, mill_id) -> None:
     household_id = _create_household(client, mill_id)
     base_payload = {
         "signature_method": "signature",
@@ -210,8 +201,7 @@ def test_create_consent_record_with_invalid_mykad_last4_returns_422(client) -> N
         assert response.status_code == 422
 
 
-def test_create_consent_record_twice_for_same_household_returns_409(client) -> None:
-    mill_id = uuid.uuid4()
+def test_create_consent_record_twice_for_same_household_returns_409(client, mill_id) -> None:
     household_id = _create_household(client, mill_id)
     payload = {
         "mykad_last4": "1234",
@@ -229,8 +219,7 @@ def test_create_consent_record_twice_for_same_household_returns_409(client) -> N
     assert response.status_code == 409
 
 
-def test_create_consent_record_for_unknown_household_returns_404(client) -> None:
-    mill_id = uuid.uuid4()
+def test_create_consent_record_for_unknown_household_returns_404(client, mill_id) -> None:
 
     response = client.post(
         f"/mills/{mill_id}/households/{uuid.uuid4()}/consent",
@@ -245,17 +234,16 @@ def test_create_consent_record_for_unknown_household_returns_404(client) -> None
     assert response.status_code == 404
 
 
-def test_get_consent_record_for_unknown_household_returns_404(client) -> None:
-    mill_id = uuid.uuid4()
+def test_get_consent_record_for_unknown_household_returns_404(client, mill_id) -> None:
 
     response = client.get(f"/mills/{mill_id}/households/{uuid.uuid4()}/consent")
 
     assert response.status_code == 404
 
 
-def test_consent_record_is_not_visible_to_a_different_mill(client) -> None:
-    mill_a = uuid.uuid4()
-    mill_b = uuid.uuid4()
+def test_consent_record_is_not_visible_to_a_different_mill(client, register_mill) -> None:
+    mill_a = register_mill()
+    mill_b = register_mill()
     household_id = _create_household(client, mill_a)
     payload = {
         "mykad_last4": "1234",

@@ -152,8 +152,7 @@ def _give_household_an_evidence_pack(
 # --- compute_household_status ------------------------------------------
 
 
-def test_compute_household_status_is_pending_with_no_records(db_session) -> None:
-    mill_id = uuid.uuid4()
+def test_compute_household_status_is_pending_with_no_records(db_session, mill_id) -> None:
     household = _make_household(db_session, mill_id)
 
     assert (
@@ -161,8 +160,7 @@ def test_compute_household_status_is_pending_with_no_records(db_session) -> None
     )
 
 
-def test_compute_household_status_is_cleared_with_evidence_pack(db_session) -> None:
-    mill_id = uuid.uuid4()
+def test_compute_household_status_is_cleared_with_evidence_pack(db_session, mill_id) -> None:
     household = _make_household(db_session, mill_id)
     plot = _make_plot(db_session, mill_id, household.id)
     _give_household_an_evidence_pack(db_session, mill_id, household.id, plot.id)
@@ -173,9 +171,8 @@ def test_compute_household_status_is_cleared_with_evidence_pack(db_session) -> N
 
 
 def test_compute_household_status_is_frozen_with_needs_review_field_verification_check(
-    db_session,
+    db_session, mill_id
 ) -> None:
-    mill_id = uuid.uuid4()
     household = _make_household(db_session, mill_id)
     plot = _make_plot(db_session, mill_id, household.id)
     _make_field_verification_check(
@@ -186,9 +183,8 @@ def test_compute_household_status_is_frozen_with_needs_review_field_verification
 
 
 def test_compute_household_status_is_frozen_with_needs_review_yield_licence_check(
-    db_session,
+    db_session, mill_id
 ) -> None:
-    mill_id = uuid.uuid4()
     household = _make_household(db_session, mill_id)
     _make_yield_licence_check(
         db_session, mill_id, household.id, FieldVerificationStatus.NEEDS_REVIEW
@@ -197,8 +193,7 @@ def test_compute_household_status_is_frozen_with_needs_review_yield_licence_chec
     assert compute_household_status(db_session, mill_id, household.id) == MillDashboardStatus.FROZEN
 
 
-def test_compute_household_status_frozen_takes_priority_over_cleared(db_session) -> None:
-    mill_id = uuid.uuid4()
+def test_compute_household_status_frozen_takes_priority_over_cleared(db_session, mill_id) -> None:
     household = _make_household(db_session, mill_id)
     plot = _make_plot(db_session, mill_id, household.id)
     # Both conditions hold: an evidence pack already exists, but a later
@@ -211,8 +206,7 @@ def test_compute_household_status_frozen_takes_priority_over_cleared(db_session)
     assert compute_household_status(db_session, mill_id, household.id) == MillDashboardStatus.FROZEN
 
 
-def test_compute_household_status_is_frozen_when_renewal_has_lapsed(db_session) -> None:
-    mill_id = uuid.uuid4()
+def test_compute_household_status_is_frozen_when_renewal_has_lapsed(db_session, mill_id) -> None:
     household = _make_household(db_session, mill_id)
     plot = _make_plot(db_session, mill_id, household.id)
     _give_household_an_evidence_pack(
@@ -226,8 +220,9 @@ def test_compute_household_status_is_frozen_when_renewal_has_lapsed(db_session) 
     assert compute_household_status(db_session, mill_id, household.id) == MillDashboardStatus.FROZEN
 
 
-def test_compute_household_status_is_cleared_just_before_renewal_due_date(db_session) -> None:
-    mill_id = uuid.uuid4()
+def test_compute_household_status_is_cleared_just_before_renewal_due_date(
+    db_session, mill_id
+) -> None:
     household = _make_household(db_session, mill_id)
     plot = _make_plot(db_session, mill_id, household.id)
     _give_household_an_evidence_pack(
@@ -246,9 +241,9 @@ def test_compute_household_status_is_cleared_just_before_renewal_due_date(db_ses
 # --- list_mill_dashboard -------------------------------------------------
 
 
-def test_list_mill_dashboard_scopes_by_mill_id(db_session) -> None:
-    mill_a = uuid.uuid4()
-    mill_b = uuid.uuid4()
+def test_list_mill_dashboard_scopes_by_mill_id(db_session, register_mill) -> None:
+    mill_a = register_mill()
+    mill_b = register_mill()
     household_a = _make_household(db_session, mill_a)
     _make_household(db_session, mill_b)
 

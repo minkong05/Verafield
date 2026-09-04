@@ -174,8 +174,7 @@ def _age_household_evidence_pack(db_session, mill_id: uuid.UUID, generated_at: d
 # --- single-household route -------------------------------------------------
 
 
-def test_household_with_no_records_has_null_renewal_fields_and_not_lapsed(client) -> None:
-    mill_id = uuid.uuid4()
+def test_household_with_no_records_has_null_renewal_fields_and_not_lapsed(client, mill_id) -> None:
     household_id = _create_household(client, mill_id)
 
     response = client.get(f"/mills/{mill_id}/households/{household_id}/renewal-status")
@@ -187,8 +186,7 @@ def test_household_with_no_records_has_null_renewal_fields_and_not_lapsed(client
     assert body["lapsed"] is False
 
 
-def test_household_with_recent_evidence_pack_is_not_lapsed(client) -> None:
-    mill_id = uuid.uuid4()
+def test_household_with_recent_evidence_pack_is_not_lapsed(client, mill_id) -> None:
     household_id = _household_with_evidence_pack(client, mill_id)
 
     response = client.get(f"/mills/{mill_id}/households/{household_id}/renewal-status")
@@ -200,8 +198,7 @@ def test_household_with_recent_evidence_pack_is_not_lapsed(client) -> None:
     assert body["lapsed"] is False
 
 
-def test_household_with_evidence_pack_past_due_date_is_lapsed(client, db_session) -> None:
-    mill_id = uuid.uuid4()
+def test_household_with_evidence_pack_past_due_date_is_lapsed(client, db_session, mill_id) -> None:
     household_id = _household_with_evidence_pack(client, mill_id)
     aged = datetime.now(UTC) - timedelta(days=400)
     _age_household_evidence_pack(db_session, mill_id, aged)
@@ -215,17 +212,18 @@ def test_household_with_evidence_pack_past_due_date_is_lapsed(client, db_session
     assert due_at == add_one_year(aged)
 
 
-def test_read_household_renewal_status_404s_for_unknown_household(client) -> None:
-    mill_id = uuid.uuid4()
+def test_read_household_renewal_status_404s_for_unknown_household(client, mill_id) -> None:
 
     response = client.get(f"/mills/{mill_id}/households/{uuid.uuid4()}/renewal-status")
 
     assert response.status_code == 404
 
 
-def test_read_household_renewal_status_404s_for_household_in_other_mill(client) -> None:
-    mill_a = uuid.uuid4()
-    mill_b = uuid.uuid4()
+def test_read_household_renewal_status_404s_for_household_in_other_mill(
+    client, register_mill
+) -> None:
+    mill_a = register_mill()
+    mill_b = register_mill()
     household_id = _create_household(client, mill_a)
 
     response = client.get(f"/mills/{mill_b}/households/{household_id}/renewal-status")
@@ -236,9 +234,9 @@ def test_read_household_renewal_status_404s_for_household_in_other_mill(client) 
 # --- mill-wide list route ----------------------------------------------------
 
 
-def test_mill_renewal_status_only_shows_own_mills_households(client) -> None:
-    mill_a = uuid.uuid4()
-    mill_b = uuid.uuid4()
+def test_mill_renewal_status_only_shows_own_mills_households(client, register_mill) -> None:
+    mill_a = register_mill()
+    mill_b = register_mill()
     household_a = _create_household(client, mill_a)
     _create_household(client, mill_b)
 
@@ -249,17 +247,20 @@ def test_mill_renewal_status_only_shows_own_mills_households(client) -> None:
     assert household_ids == {household_a}
 
 
-def test_empty_mill_renewal_status_returns_empty_list(client) -> None:
-    mill_id = uuid.uuid4()
-
+def test_empty_mill_renewal_status_returns_empty_list(client, mill_id) -> None:
     response = client.get(f"/mills/{mill_id}/renewal-status")
 
     assert response.status_code == 200
     assert response.json() == []
 
 
-def test_renewal_status_entry_shape(client) -> None:
-    mill_id = uuid.uuid4()
+def test_unregistered_mill_renewal_status_returns_404(client) -> None:
+    response = client.get(f"/mills/{uuid.uuid4()}/renewal-status")
+
+    assert response.status_code == 404
+
+
+def test_renewal_status_entry_shape(client, mill_id) -> None:
     household_id = _create_household(client, mill_id, name="Siti binti Yusof")
 
     response = client.get(f"/mills/{mill_id}/households/{household_id}/renewal-status")

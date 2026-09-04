@@ -8,17 +8,58 @@ same fictional story so the foreign keys actually line up:
 - Plot `33333333-3333-3333-3333-333333333333` — Amir's one registered parcel
 - Batch `cccccccc-cccc-cccc-cccc-cccccccccccc` — a shipment the mill sends to a buyer
 
-`mill_id` is a bare UUID everywhere — there is no `Mill` table yet. Every tenant
-table also carries `id + mill_id` as a composite unique key and every child
-row's FK is `(parent_id, mill_id)`, not just `parent_id`, so a row can never
-structurally attach to another mill's parent. `LandDocumentRule` /
-`LandDocumentRuleRequirement` are the two exceptions — global reference data
-with no `mill_id`.
+`mill_id` now references a real `mills` row: `households.mill_id` and
+`batches.mill_id` (the two tenant roots) carry a plain FK to `mills.id` with
+RESTRICT, not CASCADE, and every other tenant table reaches `mills`
+transitively through its parent. Every tenant table also carries
+`id + mill_id` as a composite unique key and every child row's FK is
+`(parent_id, mill_id)`, not just `parent_id`, so a row can never structurally
+attach to another mill's parent.
+
+Four tables sit outside that pattern, all deliberately: `LandDocumentRule` /
+`LandDocumentRuleRequirement` are global reference data with no `mill_id` at
+all, and `mills` / `users` sit at the root, above any tenant — `mills.id` *is*
+the tenant key, so neither has a `mill_id` column paired into a
+`UNIQUE(id, mill_id)`.
 
 Most tables cap at **one row per household** (or per plot) for MVP — noted
 per table below. `Plot` and `BatchPlot` are the exceptions.
 
 ---
+
+## mills
+
+The tenant root. One row per onboarded mill; `mills.id` is the `mill_id` every
+other table carries. No `mill_id` column and no `UNIQUE(id, mill_id)` — there
+is no tenant above a mill.
+
+| Column | Example |
+|---|---|
+| `id` | `11111111-1111-1111-1111-111111111111` |
+| `name` | Kilang Sawit Tawau |
+| `mpob_licence_number` | `MPOB-500123456` (UNIQUE — the mill's own licence, **not** the household's) |
+| `postal_address` | KM 12, Jalan Apas, 91000 Tawau, Sabah |
+| `email` | ops@kilang-tawau.example |
+| `district` | Tawau |
+| `state` | `sabah` |
+| `is_active` | `true` |
+
+## users
+
+An authenticating principal. Not a tenant table despite carrying `mill_id`:
+it sits alongside `mills` at the root.
+
+| Column | Example (admin) | Example (mill user) |
+|---|---|---|
+| `id` | `aaaaaaaa-…` | `bbbbbbbb-…` |
+| `email` | analyst@tapak.my (UNIQUE, stored lowercased) | procurement@kilang-tawau.example |
+| `password_hash` | `$argon2id$v=19$…` (exposed by no schema) | `$argon2id$v=19$…` |
+| `role` | `admin` | `mill_user` |
+| `mill_id` | `NULL` | `11111111-1111-1111-1111-111111111111` |
+| `is_active` | `true` | `true` |
+
+`ck_users_role_mill_id` enforces exactly that pairing: an admin must have
+`mill_id IS NULL`, a mill user must not.
 
 ## households
 

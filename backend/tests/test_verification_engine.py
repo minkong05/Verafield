@@ -81,8 +81,7 @@ def _yield_licence_check_payload(**overrides) -> dict:
     return payload
 
 
-def test_create_plot_returns_201(client) -> None:
-    mill_id = uuid.uuid4()
+def test_create_plot_returns_201(client, mill_id) -> None:
     household_id = _create_household(client, mill_id)
 
     response = client.post(
@@ -95,8 +94,7 @@ def test_create_plot_returns_201(client) -> None:
     assert body["area_ha"] == "2.5000"
 
 
-def test_create_plot_for_unknown_household_returns_404(client) -> None:
-    mill_id = uuid.uuid4()
+def test_create_plot_for_unknown_household_returns_404(client, mill_id) -> None:
 
     response = client.post(
         f"/mills/{mill_id}/households/{uuid.uuid4()}/plots", json=_plot_payload()
@@ -105,8 +103,7 @@ def test_create_plot_for_unknown_household_returns_404(client) -> None:
     assert response.status_code == 404
 
 
-def test_list_plots_returns_all_plots_for_a_household(client) -> None:
-    mill_id = uuid.uuid4()
+def test_list_plots_returns_all_plots_for_a_household(client, mill_id) -> None:
     household_id = _create_household(client, mill_id)
     _create_plot(client, mill_id, household_id)
     _create_plot(client, mill_id, household_id)
@@ -117,8 +114,7 @@ def test_list_plots_returns_all_plots_for_a_household(client) -> None:
     assert len(response.json()) == 2
 
 
-def test_list_plots_for_household_with_no_plots_returns_empty_list(client) -> None:
-    mill_id = uuid.uuid4()
+def test_list_plots_for_household_with_no_plots_returns_empty_list(client, mill_id) -> None:
     household_id = _create_household(client, mill_id)
 
     response = client.get(f"/mills/{mill_id}/households/{household_id}/plots")
@@ -127,8 +123,7 @@ def test_list_plots_for_household_with_no_plots_returns_empty_list(client) -> No
     assert response.json() == []
 
 
-def test_get_plot_for_unknown_plot_id_returns_404(client) -> None:
-    mill_id = uuid.uuid4()
+def test_get_plot_for_unknown_plot_id_returns_404(client, mill_id) -> None:
     household_id = _create_household(client, mill_id)
 
     response = client.get(f"/mills/{mill_id}/households/{household_id}/plots/{uuid.uuid4()}")
@@ -136,9 +131,9 @@ def test_get_plot_for_unknown_plot_id_returns_404(client) -> None:
     assert response.status_code == 404
 
 
-def test_plot_is_not_visible_to_a_different_mill(client) -> None:
-    mill_a = uuid.uuid4()
-    mill_b = uuid.uuid4()
+def test_plot_is_not_visible_to_a_different_mill(client, register_mill) -> None:
+    mill_a = register_mill()
+    mill_b = register_mill()
     household_id = _create_household(client, mill_a)
     plot_id = _create_plot(client, mill_a, household_id)
 
@@ -147,8 +142,7 @@ def test_plot_is_not_visible_to_a_different_mill(client) -> None:
     assert response.status_code == 404
 
 
-def test_create_deforestation_check_for_non_forest_plot_returns_compliant(client) -> None:
-    mill_id = uuid.uuid4()
+def test_create_deforestation_check_for_non_forest_plot_returns_compliant(client, mill_id) -> None:
     household_id = _create_household(client, mill_id)
     plot_id = _create_plot(client, mill_id, household_id)
 
@@ -162,9 +156,8 @@ def test_create_deforestation_check_for_non_forest_plot_returns_compliant(client
 
 
 def test_create_deforestation_check_for_forest_plot_with_loss_returns_non_compliant(
-    client,
+    client, mill_id
 ) -> None:
-    mill_id = uuid.uuid4()
     household_id = _create_household(client, mill_id)
     plot_id = _create_plot(client, mill_id, household_id)
 
@@ -178,9 +171,8 @@ def test_create_deforestation_check_for_forest_plot_with_loss_returns_non_compli
 
 
 def test_create_deforestation_check_for_forest_plot_without_loss_returns_compliant(
-    client,
+    client, mill_id
 ) -> None:
-    mill_id = uuid.uuid4()
     household_id = _create_household(client, mill_id)
     plot_id = _create_plot(client, mill_id, household_id)
 
@@ -193,8 +185,9 @@ def test_create_deforestation_check_for_forest_plot_without_loss_returns_complia
     assert response.json()["status"] == "compliant"
 
 
-def test_create_deforestation_check_with_inconclusive_review_returns_needs_review(client) -> None:
-    mill_id = uuid.uuid4()
+def test_create_deforestation_check_with_inconclusive_review_returns_needs_review(
+    client, mill_id
+) -> None:
     household_id = _create_household(client, mill_id)
     plot_id = _create_plot(client, mill_id, household_id)
 
@@ -207,8 +200,7 @@ def test_create_deforestation_check_with_inconclusive_review_returns_needs_revie
     assert response.json()["status"] == "needs_review"
 
 
-def test_create_deforestation_check_for_unknown_plot_returns_404(client) -> None:
-    mill_id = uuid.uuid4()
+def test_create_deforestation_check_for_unknown_plot_returns_404(client, mill_id) -> None:
     household_id = _create_household(client, mill_id)
 
     response = client.post(
@@ -219,8 +211,7 @@ def test_create_deforestation_check_for_unknown_plot_returns_404(client) -> None
     assert response.status_code == 404
 
 
-def test_create_deforestation_check_twice_for_same_plot_returns_409(client) -> None:
-    mill_id = uuid.uuid4()
+def test_create_deforestation_check_twice_for_same_plot_returns_409(client, mill_id) -> None:
     household_id = _create_household(client, mill_id)
     plot_id = _create_plot(client, mill_id, household_id)
     url = f"/mills/{mill_id}/households/{household_id}/plots/{plot_id}/deforestation-check"
@@ -232,9 +223,8 @@ def test_create_deforestation_check_twice_for_same_plot_returns_409(client) -> N
 
 
 def test_create_deforestation_check_with_post_imagery_date_before_cutoff_returns_422(
-    client,
+    client, mill_id
 ) -> None:
-    mill_id = uuid.uuid4()
     household_id = _create_household(client, mill_id)
     plot_id = _create_plot(client, mill_id, household_id)
 
@@ -247,9 +237,8 @@ def test_create_deforestation_check_with_post_imagery_date_before_cutoff_returns
 
 
 def test_create_deforestation_check_with_pre_imagery_date_after_cutoff_returns_422(
-    client,
+    client, mill_id
 ) -> None:
-    mill_id = uuid.uuid4()
     household_id = _create_household(client, mill_id)
     plot_id = _create_plot(client, mill_id, household_id)
 
@@ -261,8 +250,7 @@ def test_create_deforestation_check_with_pre_imagery_date_after_cutoff_returns_4
     assert response.status_code == 422
 
 
-def test_get_deforestation_check_for_plot_with_none_returns_404(client) -> None:
-    mill_id = uuid.uuid4()
+def test_get_deforestation_check_for_plot_with_none_returns_404(client, mill_id) -> None:
     household_id = _create_household(client, mill_id)
     plot_id = _create_plot(client, mill_id, household_id)
 
@@ -273,9 +261,9 @@ def test_get_deforestation_check_for_plot_with_none_returns_404(client) -> None:
     assert response.status_code == 404
 
 
-def test_deforestation_check_is_not_visible_to_a_different_mill(client) -> None:
-    mill_a = uuid.uuid4()
-    mill_b = uuid.uuid4()
+def test_deforestation_check_is_not_visible_to_a_different_mill(client, register_mill) -> None:
+    mill_a = register_mill()
+    mill_b = register_mill()
     household_id = _create_household(client, mill_a)
     plot_id = _create_plot(client, mill_a, household_id)
     assert (
@@ -293,8 +281,7 @@ def test_deforestation_check_is_not_visible_to_a_different_mill(client) -> None:
     assert response.status_code == 404
 
 
-def test_create_field_verification_check_within_thresholds_returns_cleared(client) -> None:
-    mill_id = uuid.uuid4()
+def test_create_field_verification_check_within_thresholds_returns_cleared(client, mill_id) -> None:
     household_id = _create_household(client, mill_id)
     plot_id = _create_plot(client, mill_id, household_id)
 
@@ -311,8 +298,9 @@ def test_create_field_verification_check_within_thresholds_returns_cleared(clien
     assert body["area_mismatch"] is False
 
 
-def test_create_field_verification_check_with_distant_checkin_returns_needs_review(client) -> None:
-    mill_id = uuid.uuid4()
+def test_create_field_verification_check_with_distant_checkin_returns_needs_review(
+    client, mill_id
+) -> None:
     household_id = _create_household(client, mill_id)
     plot_id = _create_plot(client, mill_id, household_id)
 
@@ -327,8 +315,9 @@ def test_create_field_verification_check_with_distant_checkin_returns_needs_revi
     assert body["status"] == "needs_review"
 
 
-def test_create_field_verification_check_with_distant_photo_returns_needs_review(client) -> None:
-    mill_id = uuid.uuid4()
+def test_create_field_verification_check_with_distant_photo_returns_needs_review(
+    client, mill_id
+) -> None:
     household_id = _create_household(client, mill_id)
     plot_id = _create_plot(client, mill_id, household_id)
 
@@ -344,9 +333,8 @@ def test_create_field_verification_check_with_distant_photo_returns_needs_review
 
 
 def test_create_field_verification_check_with_title_area_variance_returns_needs_review(
-    client,
+    client, mill_id
 ) -> None:
-    mill_id = uuid.uuid4()
     household_id = _create_household(client, mill_id)
     plot_id = _create_plot(client, mill_id, household_id)  # area_ha=2.5
 
@@ -361,8 +349,7 @@ def test_create_field_verification_check_with_title_area_variance_returns_needs_
     assert body["status"] == "needs_review"
 
 
-def test_create_field_verification_check_for_unknown_plot_returns_404(client) -> None:
-    mill_id = uuid.uuid4()
+def test_create_field_verification_check_for_unknown_plot_returns_404(client, mill_id) -> None:
     household_id = _create_household(client, mill_id)
 
     response = client.post(
@@ -373,8 +360,7 @@ def test_create_field_verification_check_for_unknown_plot_returns_404(client) ->
     assert response.status_code == 404
 
 
-def test_create_field_verification_check_twice_for_same_plot_returns_409(client) -> None:
-    mill_id = uuid.uuid4()
+def test_create_field_verification_check_twice_for_same_plot_returns_409(client, mill_id) -> None:
     household_id = _create_household(client, mill_id)
     plot_id = _create_plot(client, mill_id, household_id)
     url = f"/mills/{mill_id}/households/{household_id}/plots/{plot_id}/field-verification-check"
@@ -385,8 +371,7 @@ def test_create_field_verification_check_twice_for_same_plot_returns_409(client)
     assert response.status_code == 409
 
 
-def test_get_field_verification_check_for_plot_with_none_returns_404(client) -> None:
-    mill_id = uuid.uuid4()
+def test_get_field_verification_check_for_plot_with_none_returns_404(client, mill_id) -> None:
     household_id = _create_household(client, mill_id)
     plot_id = _create_plot(client, mill_id, household_id)
 
@@ -397,9 +382,9 @@ def test_get_field_verification_check_for_plot_with_none_returns_404(client) -> 
     assert response.status_code == 404
 
 
-def test_field_verification_check_is_not_visible_to_a_different_mill(client) -> None:
-    mill_a = uuid.uuid4()
-    mill_b = uuid.uuid4()
+def test_field_verification_check_is_not_visible_to_a_different_mill(client, register_mill) -> None:
+    mill_a = register_mill()
+    mill_b = register_mill()
     household_id = _create_household(client, mill_a)
     plot_id = _create_plot(client, mill_a, household_id)
     assert (
@@ -417,8 +402,7 @@ def test_field_verification_check_is_not_visible_to_a_different_mill(client) -> 
     assert response.status_code == 404
 
 
-def test_create_yield_licence_check_within_thresholds_returns_cleared(client) -> None:
-    mill_id = uuid.uuid4()
+def test_create_yield_licence_check_within_thresholds_returns_cleared(client, mill_id) -> None:
     household_id = _create_household(client, mill_id)
     _create_plot(client, mill_id, household_id)
 
@@ -436,9 +420,8 @@ def test_create_yield_licence_check_within_thresholds_returns_cleared(client) ->
 
 
 def test_create_yield_licence_check_with_insufficient_licence_coverage_returns_needs_review(
-    client,
+    client, mill_id
 ) -> None:
-    mill_id = uuid.uuid4()
     household_id = _create_household(client, mill_id)
     _create_plot(client, mill_id, household_id)  # area_ha=2.5, needs >= 2.375 ha licensed
 
@@ -453,8 +436,9 @@ def test_create_yield_licence_check_with_insufficient_licence_coverage_returns_n
     assert body["status"] == "needs_review"
 
 
-def test_create_yield_licence_check_with_implausible_yield_returns_needs_review(client) -> None:
-    mill_id = uuid.uuid4()
+def test_create_yield_licence_check_with_implausible_yield_returns_needs_review(
+    client, mill_id
+) -> None:
     household_id = _create_household(client, mill_id)
     _create_plot(client, mill_id, household_id)  # area_ha=2.5
 
@@ -471,8 +455,7 @@ def test_create_yield_licence_check_with_implausible_yield_returns_needs_review(
     assert body["status"] == "needs_review"
 
 
-def test_create_yield_licence_check_for_unknown_household_returns_404(client) -> None:
-    mill_id = uuid.uuid4()
+def test_create_yield_licence_check_for_unknown_household_returns_404(client, mill_id) -> None:
 
     response = client.post(
         f"/mills/{mill_id}/households/{uuid.uuid4()}/yield-licence-check",
@@ -482,8 +465,7 @@ def test_create_yield_licence_check_for_unknown_household_returns_404(client) ->
     assert response.status_code == 404
 
 
-def test_create_yield_licence_check_twice_for_same_household_returns_409(client) -> None:
-    mill_id = uuid.uuid4()
+def test_create_yield_licence_check_twice_for_same_household_returns_409(client, mill_id) -> None:
     household_id = _create_household(client, mill_id)
     _create_plot(client, mill_id, household_id)
     url = f"/mills/{mill_id}/households/{household_id}/yield-licence-check"
@@ -494,8 +476,7 @@ def test_create_yield_licence_check_twice_for_same_household_returns_409(client)
     assert response.status_code == 409
 
 
-def test_get_yield_licence_check_for_household_with_none_returns_404(client) -> None:
-    mill_id = uuid.uuid4()
+def test_get_yield_licence_check_for_household_with_none_returns_404(client, mill_id) -> None:
     household_id = _create_household(client, mill_id)
 
     response = client.get(f"/mills/{mill_id}/households/{household_id}/yield-licence-check")
@@ -503,9 +484,9 @@ def test_get_yield_licence_check_for_household_with_none_returns_404(client) -> 
     assert response.status_code == 404
 
 
-def test_yield_licence_check_is_not_visible_to_a_different_mill(client) -> None:
-    mill_a = uuid.uuid4()
-    mill_b = uuid.uuid4()
+def test_yield_licence_check_is_not_visible_to_a_different_mill(client, register_mill) -> None:
+    mill_a = register_mill()
+    mill_b = register_mill()
     household_id = _create_household(client, mill_a)
     _create_plot(client, mill_a, household_id)
     assert (

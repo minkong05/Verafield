@@ -50,8 +50,7 @@ def _national_systems_lookup_payload(**overrides) -> dict:
     return payload
 
 
-def test_create_national_systems_lookup_within_benchmark_returns_cleared(client) -> None:
-    mill_id = uuid.uuid4()
+def test_create_national_systems_lookup_within_benchmark_returns_cleared(client, mill_id) -> None:
     household_id = _create_household(client, mill_id)
     _create_plot(client, mill_id, household_id)
 
@@ -67,8 +66,9 @@ def test_create_national_systems_lookup_within_benchmark_returns_cleared(client)
     assert body["declared_area_ha"] == "2.5000"
 
 
-def test_create_national_systems_lookup_over_benchmark_returns_needs_review(client) -> None:
-    mill_id = uuid.uuid4()
+def test_create_national_systems_lookup_over_benchmark_returns_needs_review(
+    client, mill_id
+) -> None:
     household_id = _create_household(client, mill_id)
     _create_plot(client, mill_id, household_id)
 
@@ -83,8 +83,7 @@ def test_create_national_systems_lookup_over_benchmark_returns_needs_review(clie
     assert body["volume_yield_mismatch"] is True
 
 
-def test_create_national_systems_lookup_for_unknown_household_returns_404(client) -> None:
-    mill_id = uuid.uuid4()
+def test_create_national_systems_lookup_for_unknown_household_returns_404(client, mill_id) -> None:
 
     response = client.post(
         f"/mills/{mill_id}/households/{uuid.uuid4()}/national-systems-lookup",
@@ -94,8 +93,9 @@ def test_create_national_systems_lookup_for_unknown_household_returns_404(client
     assert response.status_code == 404
 
 
-def test_create_national_systems_lookup_twice_for_same_household_returns_409(client) -> None:
-    mill_id = uuid.uuid4()
+def test_create_national_systems_lookup_twice_for_same_household_returns_409(
+    client, mill_id
+) -> None:
     household_id = _create_household(client, mill_id)
     url = f"/mills/{mill_id}/households/{household_id}/national-systems-lookup"
     assert client.post(url, json=_national_systems_lookup_payload()).status_code == 201
@@ -105,8 +105,7 @@ def test_create_national_systems_lookup_twice_for_same_household_returns_409(cli
     assert response.status_code == 409
 
 
-def test_get_national_systems_lookup_for_household_with_none_returns_404(client) -> None:
-    mill_id = uuid.uuid4()
+def test_get_national_systems_lookup_for_household_with_none_returns_404(client, mill_id) -> None:
     household_id = _create_household(client, mill_id)
 
     response = client.get(f"/mills/{mill_id}/households/{household_id}/national-systems-lookup")
@@ -114,8 +113,7 @@ def test_get_national_systems_lookup_for_household_with_none_returns_404(client)
     assert response.status_code == 404
 
 
-def test_get_national_systems_lookup_returns_created_lookup(client) -> None:
-    mill_id = uuid.uuid4()
+def test_get_national_systems_lookup_returns_created_lookup(client, mill_id) -> None:
     household_id = _create_household(client, mill_id)
     url = f"/mills/{mill_id}/households/{household_id}/national-systems-lookup"
     created = client.post(url, json=_national_systems_lookup_payload()).json()
@@ -126,9 +124,9 @@ def test_get_national_systems_lookup_returns_created_lookup(client) -> None:
     assert response.json()["id"] == created["id"]
 
 
-def test_national_systems_lookup_is_not_visible_to_a_different_mill(client) -> None:
-    mill_a = uuid.uuid4()
-    mill_b = uuid.uuid4()
+def test_national_systems_lookup_is_not_visible_to_a_different_mill(client, register_mill) -> None:
+    mill_a = register_mill()
+    mill_b = register_mill()
     household_id = _create_household(client, mill_a)
     client.post(
         f"/mills/{mill_a}/households/{household_id}/national-systems-lookup",

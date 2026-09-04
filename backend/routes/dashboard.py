@@ -4,10 +4,13 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from backend.db.session import get_db
+from backend.routes.dependencies import authorize_mill
 from backend.services.dashboard import service
 from packages.shared_types import MillDashboardSupplier
 
-router = APIRouter(prefix="/mills/{mill_id}/dashboard", tags=["dashboard"])
+router = APIRouter(
+    prefix="/mills/{mill_id}/dashboard", tags=["dashboard"], dependencies=[Depends(authorize_mill)]
+)
 
 
 @router.get("", response_model=list[MillDashboardSupplier])

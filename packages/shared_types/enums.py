@@ -80,3 +80,12 @@ class MillDashboardStatus(StrEnum):
     CLEARED = "cleared"
     PENDING = "pending"
     FROZEN = "frozen"
+
+
+class UserRole(StrEnum):
+    """The two principal kinds. ADMIN is TAPAK staff (the compliance analyst
+    of the roadmap docs) and is never bound to a mill; MILL_USER acts for
+    exactly one mill. Roles *within* a mill are deliberately out of scope."""
+
+    ADMIN = "admin"
+    MILL_USER = "mill_user"

@@ -1,3 +1,11 @@
+from shared_types.auth import (
+    LoginRequest,
+    PasswordChangeRequest,
+    TokenResponse,
+    User,
+    UserCreate,
+    UserUpdate,
+)
 from shared_types.dashboard import MillDashboardSupplier
 from shared_types.enums import (
     DeforestationStatus,
@@ -11,6 +19,7 @@ from shared_types.enums import (
     MillDashboardStatus,
     NoMixingStatus,
     SignatureMethod,
+    UserRole,
 )
 from shared_types.evidence_pack import (
     Batch,
@@ -38,6 +47,7 @@ from shared_types.labour_declaration import (
     LabourDeclaration,
     LabourDeclarationCreate,
 )
+from shared_types.mill import Mill, MillCreate, MillUpdate
 from shared_types.national_integration import NationalSystemsLookup, NationalSystemsLookupCreate
 from shared_types.plot import Plot, PlotCreate
 from shared_types.renewal import RenewalStatus
@@ -93,16 +103,26 @@ __all__ = [
     "LandOwnershipAssessmentCreate",
     "LandOwnershipStatus",
     "LandType",
+    "LoginRequest",
     "MalaysiaState",
+    "Mill",
+    "MillCreate",
     "MillDashboardStatus",
     "MillDashboardSupplier",
+    "MillUpdate",
     "NationalSystemsLookup",
     "NationalSystemsLookupCreate",
     "NoMixingStatus",
+    "PasswordChangeRequest",
     "Plot",
     "PlotCreate",
     "RenewalStatus",
     "SignatureMethod",
+    "TokenResponse",
+    "User",
+    "UserCreate",
+    "UserRole",
+    "UserUpdate",
     "YieldLicenceCheck",
     "YieldLicenceCheckCreate",
 ]
