@@ -7,7 +7,7 @@ from backend.db.models.household import Household
 from backend.db.models.plot import Plot
 from backend.db.models.verification_engine import FieldVerificationCheck, YieldLicenceCheck
 from backend.services.renewal.service import household_renewal_is_lapsed
-from shared_types.enums import FieldVerificationStatus, MillDashboardStatus
+from packages.shared_types.enums import FieldVerificationStatus, MillDashboardStatus
 
 __all__ = ["compute_household_status", "list_mill_dashboard"]
 

@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from backend.db.session import get_db
+from backend.routes.dependencies import get_current_user, require_admin, validate_mill
 from backend.services.gap_assessment.service import HouseholdNotFoundError
 from backend.services.rules_engine import service
 from packages.shared_types import LandDocumentRule as LandDocumentRuleSchema
@@ -14,7 +15,14 @@ from packages.shared_types.enums import LandType, MalaysiaState
 router = APIRouter(tags=["rules-engine"])
 
 
-@router.get("/land-ownership-rules/{state}/{land_type}", response_model=LandDocumentRuleSchema)
+@router.get(
+    "/land-ownership-rules/{state}/{land_type}",
+    response_model=LandDocumentRuleSchema,
+    # The Land Document Playbook is core in-house IP and global reference
+    # data: any authenticated principal may read it, and it stays
+    # mill-free — no tenant scoping, no 403 between mills.
+    dependencies=[Depends(get_current_user)],
+)
 def read_land_document_rule(
     state: MalaysiaState, land_type: LandType, db: Session = Depends(get_db)
 ) -> LandDocumentRuleSchema:
@@ -29,6 +37,7 @@ def read_land_document_rule(
     "/mills/{mill_id}/households/{household_id}/land-ownership-assessment",
     response_model=LandOwnershipAssessmentSchema,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_admin), Depends(validate_mill)],
 )
 def create_land_ownership_assessment(
     mill_id: uuid.UUID,
@@ -50,6 +59,7 @@ def create_land_ownership_assessment(
 @router.get(
     "/mills/{mill_id}/households/{household_id}/land-ownership-assessment",
     response_model=LandOwnershipAssessmentSchema,
+    dependencies=[Depends(require_admin), Depends(validate_mill)],
 )
 def read_land_ownership_assessment(
     mill_id: uuid.UUID, household_id: uuid.UUID, db: Session = Depends(get_db)

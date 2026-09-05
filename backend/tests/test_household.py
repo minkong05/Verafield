@@ -1,8 +1,7 @@
 import uuid
 
 
-def test_create_household_returns_201_with_household_shape(client) -> None:
-    mill_id = uuid.uuid4()
+def test_create_household_returns_201_with_household_shape(client, mill_id) -> None:
 
     response = client.post(
         f"/mills/{mill_id}/households",

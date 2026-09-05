@@ -4,12 +4,17 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from backend.db.session import get_db
+from backend.routes.dependencies import authorize_mill
 from backend.services.evidence_pack import service
 from packages.shared_types import Batch as BatchSchema
 from packages.shared_types import BatchCreate, EvidencePackCreate
 from packages.shared_types import EvidencePack as EvidencePackSchema
 
-router = APIRouter(prefix="/mills/{mill_id}/batches", tags=["evidence-pack"])
+router = APIRouter(
+    prefix="/mills/{mill_id}/batches",
+    tags=["evidence-pack"],
+    dependencies=[Depends(authorize_mill)],
+)
 
 
 @router.post("", response_model=BatchSchema, status_code=status.HTTP_201_CREATED)

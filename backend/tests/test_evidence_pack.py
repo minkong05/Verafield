@@ -153,8 +153,7 @@ def _cleared_household_and_plot(client, mill_id: uuid.UUID) -> tuple[str, str]:
 # --- Batch creation -----------------------------------------------------
 
 
-def test_create_batch_returns_201_with_batch_shape(client) -> None:
-    mill_id = uuid.uuid4()
+def test_create_batch_returns_201_with_batch_shape(client, mill_id) -> None:
     _, plot_id = _cleared_household_and_plot(client, mill_id)
 
     response = client.post(
@@ -170,8 +169,7 @@ def test_create_batch_returns_201_with_batch_shape(client) -> None:
     assert body["plots"][0]["plot_id"] == plot_id
 
 
-def test_create_batch_computes_single_source_no_mixing_status_for_one_plot(client) -> None:
-    mill_id = uuid.uuid4()
+def test_create_batch_computes_single_source_no_mixing_status_for_one_plot(client, mill_id) -> None:
     _, plot_id = _cleared_household_and_plot(client, mill_id)
 
     batch_id = _create_batch(client, mill_id, [{"plot_id": plot_id, "harvest_date": "2026-02-01"}])
@@ -180,8 +178,9 @@ def test_create_batch_computes_single_source_no_mixing_status_for_one_plot(clien
     assert response.json()["no_mixing_status"] == "single_source"
 
 
-def test_create_batch_computes_mixed_sources_no_mixing_status_for_two_plots(client) -> None:
-    mill_id = uuid.uuid4()
+def test_create_batch_computes_mixed_sources_no_mixing_status_for_two_plots(
+    client, mill_id
+) -> None:
     household_id = _create_household(client, mill_id)
     plot_a = _create_plot(client, mill_id, household_id)
     plot_b = _create_plot(client, mill_id, household_id)
@@ -199,8 +198,7 @@ def test_create_batch_computes_mixed_sources_no_mixing_status_for_two_plots(clie
     assert response.json()["no_mixing_status"] == "mixed_sources"
 
 
-def test_create_batch_for_unknown_plot_returns_404(client) -> None:
-    mill_id = uuid.uuid4()
+def test_create_batch_for_unknown_plot_returns_404(client, mill_id) -> None:
 
     response = client.post(
         f"/mills/{mill_id}/batches",
@@ -210,8 +208,7 @@ def test_create_batch_for_unknown_plot_returns_404(client) -> None:
     assert response.status_code == 404
 
 
-def test_create_batch_rejects_duplicate_plot_ids_returns_422(client) -> None:
-    mill_id = uuid.uuid4()
+def test_create_batch_rejects_duplicate_plot_ids_returns_422(client, mill_id) -> None:
     _, plot_id = _cleared_household_and_plot(client, mill_id)
 
     response = client.post(
@@ -227,25 +224,23 @@ def test_create_batch_rejects_duplicate_plot_ids_returns_422(client) -> None:
     assert response.status_code == 422
 
 
-def test_create_batch_rejects_empty_plot_list_returns_422(client) -> None:
-    mill_id = uuid.uuid4()
+def test_create_batch_rejects_empty_plot_list_returns_422(client, mill_id) -> None:
 
     response = client.post(f"/mills/{mill_id}/batches", json=_batch_payload([]))
 
     assert response.status_code == 422
 
 
-def test_get_batch_for_unknown_batch_returns_404(client) -> None:
-    mill_id = uuid.uuid4()
+def test_get_batch_for_unknown_batch_returns_404(client, mill_id) -> None:
 
     response = client.get(f"/mills/{mill_id}/batches/{uuid.uuid4()}")
 
     assert response.status_code == 404
 
 
-def test_batch_is_not_visible_to_a_different_mill(client) -> None:
-    mill_a = uuid.uuid4()
-    mill_b = uuid.uuid4()
+def test_batch_is_not_visible_to_a_different_mill(client, register_mill) -> None:
+    mill_a = register_mill()
+    mill_b = register_mill()
     _, plot_id = _cleared_household_and_plot(client, mill_a)
     batch_id = _create_batch(client, mill_a, [{"plot_id": plot_id, "harvest_date": "2026-02-01"}])
 
@@ -257,8 +252,7 @@ def test_batch_is_not_visible_to_a_different_mill(client) -> None:
 # --- Evidence pack generation: the gate ----------------------------------
 
 
-def test_generate_evidence_pack_returns_201_when_all_households_cleared(client) -> None:
-    mill_id = uuid.uuid4()
+def test_generate_evidence_pack_returns_201_when_all_households_cleared(client, mill_id) -> None:
     _, plot_id = _cleared_household_and_plot(client, mill_id)
     batch_id = _create_batch(client, mill_id, [{"plot_id": plot_id, "harvest_date": "2026-02-01"}])
 
@@ -270,8 +264,9 @@ def test_generate_evidence_pack_returns_201_when_all_households_cleared(client) 
     assert response.status_code == 201
 
 
-def test_generate_evidence_pack_blocked_when_a_plot_has_no_deforestation_check(client) -> None:
-    mill_id = uuid.uuid4()
+def test_generate_evidence_pack_blocked_when_a_plot_has_no_deforestation_check(
+    client, mill_id
+) -> None:
     household_id = _create_household(client, mill_id)
     plot_id = _create_plot(client, mill_id, household_id)
     assert (
@@ -305,8 +300,9 @@ def test_generate_evidence_pack_blocked_when_a_plot_has_no_deforestation_check(c
     assert response.status_code == 422
 
 
-def test_generate_evidence_pack_blocked_when_a_plot_has_no_field_verification_check(client) -> None:
-    mill_id = uuid.uuid4()
+def test_generate_evidence_pack_blocked_when_a_plot_has_no_field_verification_check(
+    client, mill_id
+) -> None:
     household_id = _create_household(client, mill_id)
     plot_id = _create_plot(client, mill_id, household_id)
     assert (
@@ -341,9 +337,8 @@ def test_generate_evidence_pack_blocked_when_a_plot_has_no_field_verification_ch
 
 
 def test_generate_evidence_pack_blocked_when_a_field_verification_check_is_needs_review(
-    client,
+    client, mill_id
 ) -> None:
-    mill_id = uuid.uuid4()
     household_id = _create_household(client, mill_id)
     plot_id = _create_plot(client, mill_id, household_id)
     assert (
@@ -383,8 +378,9 @@ def test_generate_evidence_pack_blocked_when_a_field_verification_check_is_needs
     assert response.status_code == 422
 
 
-def test_generate_evidence_pack_blocked_when_a_deforestation_check_is_needs_review(client) -> None:
-    mill_id = uuid.uuid4()
+def test_generate_evidence_pack_blocked_when_a_deforestation_check_is_needs_review(
+    client, mill_id
+) -> None:
     household_id = _create_household(client, mill_id)
     plot_id = _create_plot(client, mill_id, household_id)
     deforestation_check = client.post(
@@ -424,8 +420,9 @@ def test_generate_evidence_pack_blocked_when_a_deforestation_check_is_needs_revi
     assert response.status_code == 422
 
 
-def test_generate_evidence_pack_blocked_when_yield_licence_check_is_missing(client) -> None:
-    mill_id = uuid.uuid4()
+def test_generate_evidence_pack_blocked_when_yield_licence_check_is_missing(
+    client, mill_id
+) -> None:
     household_id = _create_household(client, mill_id)
     plot_id = _create_plot(client, mill_id, household_id)
     assert (
@@ -459,8 +456,9 @@ def test_generate_evidence_pack_blocked_when_yield_licence_check_is_missing(clie
     assert response.status_code == 422
 
 
-def test_generate_evidence_pack_blocked_when_land_ownership_assessment_is_missing(client) -> None:
-    mill_id = uuid.uuid4()
+def test_generate_evidence_pack_blocked_when_land_ownership_assessment_is_missing(
+    client, mill_id
+) -> None:
     household_id = _create_household(client, mill_id)
     plot_id = _create_plot(client, mill_id, household_id)
     assert (
@@ -495,9 +493,8 @@ def test_generate_evidence_pack_blocked_when_land_ownership_assessment_is_missin
 
 
 def test_generate_evidence_pack_blocked_when_household_has_an_unrelated_uncleared_plot(
-    client,
+    client, mill_id
 ) -> None:
-    mill_id = uuid.uuid4()
     household_id = _create_household(client, mill_id)
     plot_in_batch = _create_plot(client, mill_id, household_id)
     _clear_household(client, mill_id, household_id, plot_in_batch)
@@ -518,8 +515,7 @@ def test_generate_evidence_pack_blocked_when_household_has_an_unrelated_uncleare
 # --- Evidence pack generation: output shape and standard cases -----------
 
 
-def test_generate_evidence_pack_assembled_data_maps_annex_ii_fields(client) -> None:
-    mill_id = uuid.uuid4()
+def test_generate_evidence_pack_assembled_data_maps_annex_ii_fields(client, mill_id) -> None:
     household_id, plot_id = _cleared_household_and_plot(client, mill_id)
     batch_id = _create_batch(client, mill_id, [{"plot_id": plot_id, "harvest_date": "2026-02-01"}])
 
@@ -562,8 +558,7 @@ def test_generate_evidence_pack_assembled_data_maps_annex_ii_fields(client) -> N
     assert legality_entry["documents_collected"] == ["sabah_native_title"]
 
 
-def test_generate_evidence_pack_geojson_has_one_feature_per_plot(client) -> None:
-    mill_id = uuid.uuid4()
+def test_generate_evidence_pack_geojson_has_one_feature_per_plot(client, mill_id) -> None:
     household_id = _create_household(client, mill_id)
     plot_a = _create_plot(client, mill_id, household_id)
     # plot_a is cleared (including the household-level yield-licence check)
@@ -605,8 +600,7 @@ def test_generate_evidence_pack_geojson_has_one_feature_per_plot(client) -> None
     assert len(geojson["features"]) == 2
 
 
-def test_generate_evidence_pack_for_unknown_batch_returns_404(client) -> None:
-    mill_id = uuid.uuid4()
+def test_generate_evidence_pack_for_unknown_batch_returns_404(client, mill_id) -> None:
 
     response = client.post(
         f"/mills/{mill_id}/batches/{uuid.uuid4()}/evidence-pack",
@@ -616,8 +610,7 @@ def test_generate_evidence_pack_for_unknown_batch_returns_404(client) -> None:
     assert response.status_code == 404
 
 
-def test_generate_evidence_pack_twice_for_same_batch_returns_409(client) -> None:
-    mill_id = uuid.uuid4()
+def test_generate_evidence_pack_twice_for_same_batch_returns_409(client, mill_id) -> None:
     _, plot_id = _cleared_household_and_plot(client, mill_id)
     batch_id = _create_batch(client, mill_id, [{"plot_id": plot_id, "harvest_date": "2026-02-01"}])
     url = f"/mills/{mill_id}/batches/{batch_id}/evidence-pack"
@@ -628,8 +621,7 @@ def test_generate_evidence_pack_twice_for_same_batch_returns_409(client) -> None
     assert response.status_code == 409
 
 
-def test_get_evidence_pack_for_batch_with_none_returns_404(client) -> None:
-    mill_id = uuid.uuid4()
+def test_get_evidence_pack_for_batch_with_none_returns_404(client, mill_id) -> None:
     _, plot_id = _cleared_household_and_plot(client, mill_id)
     batch_id = _create_batch(client, mill_id, [{"plot_id": plot_id, "harvest_date": "2026-02-01"}])
 
@@ -638,9 +630,9 @@ def test_get_evidence_pack_for_batch_with_none_returns_404(client) -> None:
     assert response.status_code == 404
 
 
-def test_evidence_pack_is_not_visible_to_a_different_mill(client) -> None:
-    mill_a = uuid.uuid4()
-    mill_b = uuid.uuid4()
+def test_evidence_pack_is_not_visible_to_a_different_mill(client, register_mill) -> None:
+    mill_a = register_mill()
+    mill_b = register_mill()
     _, plot_id = _cleared_household_and_plot(client, mill_a)
     batch_id = _create_batch(client, mill_a, [{"plot_id": plot_id, "harvest_date": "2026-02-01"}])
     assert (

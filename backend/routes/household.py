@@ -4,11 +4,16 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from backend.db.session import get_db
+from backend.routes.dependencies import require_admin, validate_mill
 from backend.services.gap_assessment import service
 from packages.shared_types import Household as HouseholdSchema
 from packages.shared_types import HouseholdCreate
 
-router = APIRouter(prefix="/mills/{mill_id}/households", tags=["households"])
+router = APIRouter(
+    prefix="/mills/{mill_id}/households",
+    tags=["households"],
+    dependencies=[Depends(require_admin), Depends(validate_mill)],
+)
 
 
 @router.post("", response_model=HouseholdSchema, status_code=status.HTTP_201_CREATED)

@@ -47,6 +47,7 @@ jobs:
     env:
       DATABASE_URL: postgresql+psycopg://tapak:tapak@localhost:5432/tapak
       TEST_DATABASE_URL: postgresql+psycopg://tapak:tapak@localhost:5432/tapak_test
+      JWT_SECRET_KEY: ci-only-insecure-secret-0000000000000000
     steps:
       - uses: actions/checkout@v4
 

@@ -2,7 +2,43 @@
 
 All endpoints implemented in `backend/routes/`, registered in `backend/main.py` with no global prefix. Base URL for local dev: `http://localhost:8000`.
 
-Multi-tenant note: `mill_id` is always a path parameter (not inferred from auth — see `CLAUDE.md`), so every URL below must be filled in with a real mill UUID. A `mill_id`/`household_id` pair that doesn't structurally belong together 404s.
+Authentication: every endpoint below except `GET /health` requires a bearer
+token — `Authorization: Bearer <token>` from `POST /auth/login`. Anonymous
+requests get 401.
+
+Multi-tenant note: `mill_id` remains a path parameter, but it is now an
+*address*, not a claim. An admin may name any registered mill (404 if it is not
+registered); a mill user may name only its own and gets 403 for anything else,
+including an unregistered UUID — the two are deliberately indistinguishable to
+them. A `mill_id`/`household_id` pair that doesn't structurally belong together
+404s.
+
+---
+
+## Auth
+
+| Method | Path | Who | Notes |
+|---|---|---|---|
+| POST | `/auth/login` | anyone | `{email, password}` → `{access_token, token_type, expires_at}`. 401 on bad password, unknown email or a deactivated account — all three return an identical body |
+| GET | `/auth/me` | any principal | The caller's own account |
+| POST | `/auth/change-password` | any principal | `{current_password, new_password}` → 204 |
+
+## Users (admin only)
+
+| Method | Path | Notes |
+|---|---|---|
+| POST | `/users` | 201. 409 duplicate email; 422 if an admin carries a `mill_id` or a mill user lacks one; 404 unregistered `mill_id` |
+| GET | `/users` | Optional `?mill_id=` filter |
+| PATCH | `/users/{user_id}` | `{is_active}` — the revocation path. Takes effect on the user's next request, not their next login |
+
+## Mills
+
+| Method | Path | Who | Notes |
+|---|---|---|---|
+| POST | `/mills` | admin | 201. 409 on a duplicate MPOB licence |
+| GET | `/mills` | admin | Enumerates every registered mill |
+| GET | `/mills/{mill_id}` | admin, or that mill | |
+| PATCH | `/mills/{mill_id}` | admin, or that mill | A mill user may set only `postal_address`, `email`, `district`; anything else is 403. An admin may set every field |
 
 ---
 

@@ -4,13 +4,18 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from backend.db.session import get_db
+from backend.routes.dependencies import require_admin, validate_mill
 from backend.services.gap_assessment.service import HouseholdNotFoundError
 from backend.services.labour_declaration import service
 from packages.shared_types import ConsentRecord as ConsentRecordSchema
 from packages.shared_types import ConsentRecordCreate, LabourDeclarationCreate
 from packages.shared_types import LabourDeclaration as LabourDeclarationSchema
 
-router = APIRouter(prefix="/mills/{mill_id}/households/{household_id}", tags=["labour-declaration"])
+router = APIRouter(
+    prefix="/mills/{mill_id}/households/{household_id}",
+    tags=["labour-declaration"],
+    dependencies=[Depends(require_admin), Depends(validate_mill)],
+)
 
 
 @router.post(

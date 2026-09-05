@@ -4,11 +4,14 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from backend.db.session import get_db
+from backend.routes.dependencies import authorize_mill
 from backend.services.gap_assessment.service import HouseholdNotFoundError
 from backend.services.renewal import service
-from shared_types import RenewalStatus as RenewalStatusSchema
+from packages.shared_types import RenewalStatus as RenewalStatusSchema
 
-router = APIRouter(prefix="/mills/{mill_id}", tags=["renewal"])
+router = APIRouter(
+    prefix="/mills/{mill_id}", tags=["renewal"], dependencies=[Depends(authorize_mill)]
+)
 
 
 def _to_schema(entry: service.HouseholdRenewalStatus) -> RenewalStatusSchema:

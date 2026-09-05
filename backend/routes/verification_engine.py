@@ -4,21 +4,24 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from backend.db.session import get_db
+from backend.routes.dependencies import require_admin, validate_mill
 from backend.services.gap_assessment.service import HouseholdNotFoundError
 from backend.services.verification_engine import service
-from shared_types import DeforestationCheck as DeforestationCheckSchema
-from shared_types import (
+from packages.shared_types import DeforestationCheck as DeforestationCheckSchema
+from packages.shared_types import (
     DeforestationCheckCreate,
     FieldVerificationCheckCreate,
     PlotCreate,
     YieldLicenceCheckCreate,
 )
-from shared_types import FieldVerificationCheck as FieldVerificationCheckSchema
-from shared_types import Plot as PlotSchema
-from shared_types import YieldLicenceCheck as YieldLicenceCheckSchema
+from packages.shared_types import FieldVerificationCheck as FieldVerificationCheckSchema
+from packages.shared_types import Plot as PlotSchema
+from packages.shared_types import YieldLicenceCheck as YieldLicenceCheckSchema
 
 router = APIRouter(
-    prefix="/mills/{mill_id}/households/{household_id}", tags=["verification-engine"]
+    prefix="/mills/{mill_id}/households/{household_id}",
+    tags=["verification-engine"],
+    dependencies=[Depends(require_admin), Depends(validate_mill)],
 )
 
 

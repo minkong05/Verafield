@@ -34,8 +34,9 @@ def test_read_land_document_rule_for_invalid_combination_returns_404(client) -> 
     assert response.status_code == 404
 
 
-def test_create_land_ownership_assessment_with_all_documents_returns_cleared(client) -> None:
-    mill_id = uuid.uuid4()
+def test_create_land_ownership_assessment_with_all_documents_returns_cleared(
+    client, mill_id
+) -> None:
     household_id = _create_household(client, mill_id)
 
     response = client.post(
@@ -55,8 +56,9 @@ def test_create_land_ownership_assessment_with_all_documents_returns_cleared(cli
     assert body["rule_version"] == "sabah-sarawak-v1"
 
 
-def test_create_land_ownership_assessment_missing_tenancy_agreement_returns_failed(client) -> None:
-    mill_id = uuid.uuid4()
+def test_create_land_ownership_assessment_missing_tenancy_agreement_returns_failed(
+    client, mill_id
+) -> None:
     household_id = _create_household(client, mill_id)
 
     response = client.post(
@@ -74,9 +76,8 @@ def test_create_land_ownership_assessment_missing_tenancy_agreement_returns_fail
 
 
 def test_create_land_ownership_assessment_missing_non_hard_fail_document_needs_follow_up(
-    client,
+    client, mill_id
 ) -> None:
-    mill_id = uuid.uuid4()
     household_id = _create_household(client, mill_id)
 
     response = client.post(
@@ -93,8 +94,9 @@ def test_create_land_ownership_assessment_missing_non_hard_fail_document_needs_f
     assert response.json()["status"] == "needs_follow_up"
 
 
-def test_create_land_ownership_assessment_twice_for_same_household_returns_409(client) -> None:
-    mill_id = uuid.uuid4()
+def test_create_land_ownership_assessment_twice_for_same_household_returns_409(
+    client, mill_id
+) -> None:
     household_id = _create_household(client, mill_id)
     payload = {
         "state": "sabah",
@@ -116,8 +118,9 @@ def test_create_land_ownership_assessment_twice_for_same_household_returns_409(c
     assert response.status_code == 409
 
 
-def test_create_land_ownership_assessment_for_unknown_household_returns_404(client) -> None:
-    mill_id = uuid.uuid4()
+def test_create_land_ownership_assessment_for_unknown_household_returns_404(
+    client, mill_id
+) -> None:
 
     response = client.post(
         f"/mills/{mill_id}/households/{uuid.uuid4()}/land-ownership-assessment",
@@ -133,9 +136,8 @@ def test_create_land_ownership_assessment_for_unknown_household_returns_404(clie
 
 
 def test_create_land_ownership_assessment_with_invalid_state_land_type_combination_returns_422(
-    client,
+    client, mill_id
 ) -> None:
-    mill_id = uuid.uuid4()
     household_id = _create_household(client, mill_id)
 
     response = client.post(
@@ -151,17 +153,18 @@ def test_create_land_ownership_assessment_with_invalid_state_land_type_combinati
     assert response.status_code == 422
 
 
-def test_get_land_ownership_assessment_for_unknown_household_returns_404(client) -> None:
-    mill_id = uuid.uuid4()
+def test_get_land_ownership_assessment_for_unknown_household_returns_404(client, mill_id) -> None:
 
     response = client.get(f"/mills/{mill_id}/households/{uuid.uuid4()}/land-ownership-assessment")
 
     assert response.status_code == 404
 
 
-def test_land_ownership_assessment_is_not_visible_to_a_different_mill(client) -> None:
-    mill_a = uuid.uuid4()
-    mill_b = uuid.uuid4()
+def test_land_ownership_assessment_is_not_visible_to_a_different_mill(
+    client, register_mill
+) -> None:
+    mill_a = register_mill()
+    mill_b = register_mill()
     household_id = _create_household(client, mill_a)
     payload = {
         "state": "sabah",

@@ -62,8 +62,7 @@ def _lookup_payload(**overrides) -> NationalSystemsLookupCreate:
     return NationalSystemsLookupCreate(**kwargs)
 
 
-def test_create_national_systems_lookup_snapshots_declared_area(db_session) -> None:
-    mill_id = uuid.uuid4()
+def test_create_national_systems_lookup_snapshots_declared_area(db_session, mill_id) -> None:
     household = _make_household(db_session, mill_id)
     _make_plot(db_session, mill_id, household.id)
 
@@ -72,8 +71,7 @@ def test_create_national_systems_lookup_snapshots_declared_area(db_session) -> N
     assert lookup.declared_area_ha == Decimal("2.5000")
 
 
-def test_create_national_systems_lookup_is_cleared_within_benchmark(db_session) -> None:
-    mill_id = uuid.uuid4()
+def test_create_national_systems_lookup_is_cleared_within_benchmark(db_session, mill_id) -> None:
     household = _make_household(db_session, mill_id)
     _make_plot(db_session, mill_id, household.id)
 
@@ -84,8 +82,7 @@ def test_create_national_systems_lookup_is_cleared_within_benchmark(db_session) 
     assert lookup.status == FieldVerificationStatus.CLEARED
 
 
-def test_create_national_systems_lookup_needs_review_over_benchmark(db_session) -> None:
-    mill_id = uuid.uuid4()
+def test_create_national_systems_lookup_needs_review_over_benchmark(db_session, mill_id) -> None:
     household = _make_household(db_session, mill_id)
     _make_plot(db_session, mill_id, household.id)
 
@@ -101,8 +98,7 @@ def test_create_national_systems_lookup_needs_review_over_benchmark(db_session) 
     assert lookup.status == FieldVerificationStatus.NEEDS_REVIEW
 
 
-def test_create_national_systems_lookup_with_no_plots_has_no_mismatch(db_session) -> None:
-    mill_id = uuid.uuid4()
+def test_create_national_systems_lookup_with_no_plots_has_no_mismatch(db_session, mill_id) -> None:
     household = _make_household(db_session, mill_id)
 
     lookup = create_national_systems_lookup(db_session, mill_id, household.id, _lookup_payload())
@@ -112,15 +108,13 @@ def test_create_national_systems_lookup_with_no_plots_has_no_mismatch(db_session
     assert lookup.status == FieldVerificationStatus.CLEARED
 
 
-def test_create_national_systems_lookup_raises_for_unknown_household(db_session) -> None:
-    mill_id = uuid.uuid4()
+def test_create_national_systems_lookup_raises_for_unknown_household(db_session, mill_id) -> None:
 
     with pytest.raises(HouseholdNotFoundError):
         create_national_systems_lookup(db_session, mill_id, uuid.uuid4(), _lookup_payload())
 
 
-def test_create_national_systems_lookup_raises_when_one_already_exists(db_session) -> None:
-    mill_id = uuid.uuid4()
+def test_create_national_systems_lookup_raises_when_one_already_exists(db_session, mill_id) -> None:
     household = _make_household(db_session, mill_id)
     create_national_systems_lookup(db_session, mill_id, household.id, _lookup_payload())
 
@@ -128,17 +122,16 @@ def test_create_national_systems_lookup_raises_when_one_already_exists(db_sessio
         create_national_systems_lookup(db_session, mill_id, household.id, _lookup_payload())
 
 
-def test_get_national_systems_lookup_raises_when_none_exists(db_session) -> None:
-    mill_id = uuid.uuid4()
+def test_get_national_systems_lookup_raises_when_none_exists(db_session, mill_id) -> None:
     household = _make_household(db_session, mill_id)
 
     with pytest.raises(NationalSystemsLookupNotFoundError):
         get_national_systems_lookup(db_session, mill_id, household.id)
 
 
-def test_get_national_systems_lookup_is_scoped_by_mill(db_session) -> None:
-    mill_a = uuid.uuid4()
-    mill_b = uuid.uuid4()
+def test_get_national_systems_lookup_is_scoped_by_mill(db_session, register_mill) -> None:
+    mill_a = register_mill()
+    mill_b = register_mill()
     household = _make_household(db_session, mill_a)
     create_national_systems_lookup(db_session, mill_a, household.id, _lookup_payload())
 

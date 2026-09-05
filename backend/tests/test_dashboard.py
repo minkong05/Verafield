@@ -168,8 +168,7 @@ def _dashboard_entry(client, mill_id: uuid.UUID, household_id: str) -> dict:
 # --- Pending --------------------------------------------------------------
 
 
-def test_household_with_no_records_is_pending(client) -> None:
-    mill_id = uuid.uuid4()
+def test_household_with_no_records_is_pending(client, mill_id) -> None:
     household_id = _create_household(client, mill_id)
 
     entry = _dashboard_entry(client, mill_id, household_id)
@@ -177,8 +176,7 @@ def test_household_with_no_records_is_pending(client) -> None:
     assert entry["status"] == "pending"
 
 
-def test_household_with_gap_assessment_only_is_pending(client) -> None:
-    mill_id = uuid.uuid4()
+def test_household_with_gap_assessment_only_is_pending(client, mill_id) -> None:
     household_id = _create_household(client, mill_id)
     assert (
         client.post(
@@ -196,8 +194,7 @@ def test_household_with_gap_assessment_only_is_pending(client) -> None:
 # --- Cleared ----------------------------------------------------------------
 
 
-def test_household_with_evidence_pack_is_cleared(client) -> None:
-    mill_id = uuid.uuid4()
+def test_household_with_evidence_pack_is_cleared(client, mill_id) -> None:
     household_id, plot_id = _cleared_household_and_plot(client, mill_id)
     batch_id = _create_batch(client, mill_id, [{"plot_id": plot_id, "harvest_date": "2026-02-01"}])
     assert (
@@ -213,8 +210,7 @@ def test_household_with_evidence_pack_is_cleared(client) -> None:
     assert entry["status"] == "cleared"
 
 
-def test_household_without_evidence_pack_is_not_cleared(client) -> None:
-    mill_id = uuid.uuid4()
+def test_household_without_evidence_pack_is_not_cleared(client, mill_id) -> None:
     # Fully cleared (household_is_cleared would be True), but no batch/pack
     # ever generated — Feature 07's "cleared" is not household_is_cleared.
     household_id, _ = _cleared_household_and_plot(client, mill_id)
@@ -227,8 +223,7 @@ def test_household_without_evidence_pack_is_not_cleared(client) -> None:
 # --- Frozen -----------------------------------------------------------------
 
 
-def test_household_with_needs_review_field_verification_check_is_frozen(client) -> None:
-    mill_id = uuid.uuid4()
+def test_household_with_needs_review_field_verification_check_is_frozen(client, mill_id) -> None:
     household_id = _create_household(client, mill_id)
     plot_id = _create_plot(client, mill_id, household_id)
     field_check = client.post(
@@ -243,8 +238,7 @@ def test_household_with_needs_review_field_verification_check_is_frozen(client) 
     assert entry["status"] == "frozen"
 
 
-def test_household_with_needs_review_yield_licence_check_is_frozen(client) -> None:
-    mill_id = uuid.uuid4()
+def test_household_with_needs_review_yield_licence_check_is_frozen(client, mill_id) -> None:
     household_id = _create_household(client, mill_id)
     _create_plot(client, mill_id, household_id)
     yield_check = client.post(
@@ -259,8 +253,7 @@ def test_household_with_needs_review_yield_licence_check_is_frozen(client) -> No
     assert entry["status"] == "frozen"
 
 
-def test_household_with_lapsed_evidence_pack_is_frozen(client, db_session) -> None:
-    mill_id = uuid.uuid4()
+def test_household_with_lapsed_evidence_pack_is_frozen(client, db_session, mill_id) -> None:
     household_id, plot_id = _cleared_household_and_plot(client, mill_id)
     batch_id = _create_batch(client, mill_id, [{"plot_id": plot_id, "harvest_date": "2026-02-01"}])
     assert (
@@ -282,9 +275,9 @@ def test_household_with_lapsed_evidence_pack_is_frozen(client, db_session) -> No
 # --- Multi-tenant isolation ---------------------------------------------
 
 
-def test_dashboard_only_shows_own_mills_households(client) -> None:
-    mill_a = uuid.uuid4()
-    mill_b = uuid.uuid4()
+def test_dashboard_only_shows_own_mills_households(client, register_mill) -> None:
+    mill_a = register_mill()
+    mill_b = register_mill()
     household_a = _create_household(client, mill_a)
     _create_household(client, mill_b)
 
@@ -295,20 +288,23 @@ def test_dashboard_only_shows_own_mills_households(client) -> None:
     assert household_ids == {household_a}
 
 
-def test_empty_mill_returns_empty_list(client) -> None:
-    mill_id = uuid.uuid4()
-
+def test_empty_mill_returns_empty_list(client, mill_id) -> None:
     response = client.get(f"/mills/{mill_id}/dashboard")
 
     assert response.status_code == 200
     assert response.json() == []
 
 
+def test_unregistered_mill_dashboard_returns_404(client) -> None:
+    response = client.get(f"/mills/{uuid.uuid4()}/dashboard")
+
+    assert response.status_code == 404
+
+
 # --- Response shape -------------------------------------------------------
 
 
-def test_dashboard_entry_shape(client) -> None:
-    mill_id = uuid.uuid4()
+def test_dashboard_entry_shape(client, mill_id) -> None:
     household_id = _create_household(client, mill_id, name="Siti binti Yusof")
 
     entry = _dashboard_entry(client, mill_id, household_id)

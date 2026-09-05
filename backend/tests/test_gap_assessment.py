@@ -21,8 +21,7 @@ def _create_household(client, mill_id: uuid.UUID, name: str = "Ahmad bin Ismail"
     return response.json()["id"]
 
 
-def test_create_gap_assessment_with_full_checklist_returns_201(client) -> None:
-    mill_id = uuid.uuid4()
+def test_create_gap_assessment_with_full_checklist_returns_201(client, mill_id) -> None:
     household_id = _create_household(client, mill_id)
 
     response = client.post(
@@ -36,8 +35,7 @@ def test_create_gap_assessment_with_full_checklist_returns_201(client) -> None:
     assert {item["category"] for item in body["items"]} == {c.value for c in EvidenceCategory}
 
 
-def test_create_gap_assessment_twice_for_same_household_returns_409(client) -> None:
-    mill_id = uuid.uuid4()
+def test_create_gap_assessment_twice_for_same_household_returns_409(client, mill_id) -> None:
     household_id = _create_household(client, mill_id)
     payload = {"assessed_by": "Officer Aiman", "items": FULL_CHECKLIST}
     assert (
@@ -54,8 +52,7 @@ def test_create_gap_assessment_twice_for_same_household_returns_409(client) -> N
     assert response.status_code == 409
 
 
-def test_create_gap_assessment_with_missing_category_returns_422(client) -> None:
-    mill_id = uuid.uuid4()
+def test_create_gap_assessment_with_missing_category_returns_422(client, mill_id) -> None:
     household_id = _create_household(client, mill_id)
     incomplete_items = FULL_CHECKLIST[:-1]  # drop one category
 
@@ -67,17 +64,16 @@ def test_create_gap_assessment_with_missing_category_returns_422(client) -> None
     assert response.status_code == 422
 
 
-def test_get_gap_assessment_for_unknown_household_returns_404(client) -> None:
-    mill_id = uuid.uuid4()
+def test_get_gap_assessment_for_unknown_household_returns_404(client, mill_id) -> None:
 
     response = client.get(f"/mills/{mill_id}/households/{uuid.uuid4()}/gap-assessment")
 
     assert response.status_code == 404
 
 
-def test_gap_assessment_is_not_visible_to_a_different_mill(client) -> None:
-    mill_a = uuid.uuid4()
-    mill_b = uuid.uuid4()
+def test_gap_assessment_is_not_visible_to_a_different_mill(client, register_mill) -> None:
+    mill_a = register_mill()
+    mill_b = register_mill()
     household_id = _create_household(client, mill_a)
     payload = {"assessed_by": "Officer Aiman", "items": FULL_CHECKLIST}
     assert (

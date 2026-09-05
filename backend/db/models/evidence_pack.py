@@ -19,7 +19,7 @@ from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.db.base import Base
-from shared_types.enums import NoMixingStatus
+from packages.shared_types.enums import NoMixingStatus
 
 if TYPE_CHECKING:
     from backend.db.models.plot import Plot
@@ -30,16 +30,26 @@ _no_mixing_status_type = SAEnum(
 
 
 class Batch(Base):
-    """A mill's shipment batch: manual-entry product/recipient fields, since
-    no Mill table exists (mill_id is a bare UUID everywhere in this codebase
-    — see backend/db/README.md). Immutable after creation, like every other
-    MVP entity (no PATCH routes exist anywhere in this codebase).
+    """A mill's shipment batch. The product and recipient fields stay
+    manual-entry now that Mill exists: recipient_* identifies the mill's
+    *buyer*, not the mill (tech.md:88 maps them to Art 9(1)(f) with source
+    "Mill record" — the mill's record *of its buyer*), and one mill ships to
+    many buyers, so they belong on the batch rather than the tenant.
+    Immutable after creation, like every other evidence-bearing entity.
     no_mixing_status is computed once at create time by
     evidence_pack.service.compute_no_mixing_status from this batch's
-    BatchPlot rows' distinct plot count."""
+    BatchPlot rows' distinct plot count.
+
+    batches is the second tenant root alongside households — it is reachable
+    from mills only through its children — so it carries its own FK to mills
+    rather than relying on batch_plots to reach one transitively. Without it a
+    zero-plot batch row could hold any mill_id at all."""
 
     __tablename__ = "batches"
     __table_args__ = (
+        # No ondelete: deleting a mill must never cascade away its evidence
+        # trail — see the Mill docstring.
+        ForeignKeyConstraint(["mill_id"], ["mills.id"], name="fk_batches_mill"),
         UniqueConstraint("id", "mill_id", name="uq_batches_id_mill_id"),
         Index("ix_batches_mill_id", "mill_id"),
     )

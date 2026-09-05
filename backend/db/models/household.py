@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Index, String, UniqueConstraint, func
+from sqlalchemy import DateTime, ForeignKeyConstraint, Index, String, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -20,6 +20,9 @@ class Household(Base):
 
     __tablename__ = "households"
     __table_args__ = (
+        # No ondelete: deleting a mill must never cascade away its evidence
+        # trail — see the Mill docstring.
+        ForeignKeyConstraint(["mill_id"], ["mills.id"], name="fk_households_mill"),
         UniqueConstraint("id", "mill_id", name="uq_households_id_mill_id"),
         Index("ix_households_mill_id", "mill_id"),
     )

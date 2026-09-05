@@ -7,8 +7,8 @@ from sqlalchemy.orm import Session
 from backend.db.models.national_integration import NationalSystemsLookup
 from backend.db.models.plot import Plot
 from backend.services.gap_assessment.service import get_household
-from shared_types.enums import FieldVerificationStatus
-from shared_types.national_integration import NationalSystemsLookupCreate
+from packages.shared_types.enums import FieldVerificationStatus
+from packages.shared_types.national_integration import NationalSystemsLookupCreate
 
 _MAX_VOLUME_YIELD_BENCHMARK_MULTIPLE = Decimal("1.5")
 
