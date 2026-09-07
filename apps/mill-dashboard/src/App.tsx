@@ -1,4 +1,4 @@
-import { FileCheck2, LogOut, Menu, RefreshCw, RotateCcw, Users, X } from "lucide-react";
+import { FileCheck2, LogOut, Menu, RefreshCw, RotateCcw, Settings, Users, X } from "lucide-react";
 import { useState } from "react";
 
 import SupplierDrawer from "./components/SupplierDrawer";
@@ -11,6 +11,7 @@ import { useSupplierDetail } from "./hooks/useSupplierDetail";
 import { useReviewQueue } from "./hooks/useReviewQueue";
 import { useEvidencePacks } from "./hooks/useEvidencePacks";
 import { useAuth } from "./hooks/useAuth";
+import { useMill } from "./hooks/useMill";
 import { DEMO_MILL_ID } from "./mocks/dashboard";
 import EvidencePacksPage from "./pages/EvidencePacksPage";
 import OverviewPage from "./pages/OverviewPage";
@@ -18,9 +19,10 @@ import RenewalsPage from "./pages/RenewalsPage";
 import ReviewQueuePage from "./pages/ReviewQueuePage";
 import SuppliersPage from "./pages/SuppliersPage";
 import LoginPage from "./pages/LoginPage";
+import SettingsPage from "./pages/SettingsPage";
 import type { Batch, MillDashboardSupplier, RenewalStatus, User, UUID } from "./types/api";
 
-type PageId = "overview" | "suppliers" | "review" | "packs" | "renewals";
+type PageId = "overview" | "suppliers" | "review" | "packs" | "renewals" | "settings";
 
 const pageLabels: Record<PageId, string> = {
   overview: "Overview",
@@ -28,6 +30,7 @@ const pageLabels: Record<PageId, string> = {
   review: "Review queue",
   packs: "Evidence packs",
   renewals: "Renewals",
+  settings: "Settings",
 };
 
 const emptySuppliers: MillDashboardSupplier[] = [];
@@ -46,6 +49,7 @@ function DashboardApp({ user, millId, onLogout }: DashboardAppProps) {
   const [selectedSupplierId, setSelectedSupplierId] = useState<UUID | null>(null);
   const [creatingBatch, setCreatingBatch] = useState(false);
   const { data, error, loading, retry, addBatch } = useDashboardData(millId);
+  const millProfile = useMill(millId);
   const selectedSupplier = data?.suppliers.find((supplier) => supplier.household_id === selectedSupplierId) ?? null;
   const selectedRenewal = data?.renewals.find((renewal) => renewal.household_id === selectedSupplierId) ?? null;
   const supplierDetail = useSupplierDetail(selectedSupplier, selectedRenewal);
@@ -78,6 +82,8 @@ function DashboardApp({ user, millId, onLogout }: DashboardAppProps) {
     }
 
     switch (activePage) {
+      case "settings":
+        return <SettingsPage mill={millProfile.mill} loading={millProfile.loading} error={millProfile.error} onUpdateContact={millProfile.updateContact} />;
       case "suppliers":
         return <SuppliersPage suppliers={data.suppliers} onSelectSupplier={setSelectedSupplierId} />;
       case "review":
@@ -87,7 +93,7 @@ function DashboardApp({ user, millId, onLogout }: DashboardAppProps) {
       case "renewals":
         return <RenewalsPage suppliers={data.suppliers} renewals={data.renewals} />;
       default:
-        return <OverviewPage suppliers={data.suppliers} renewals={data.renewals} batches={data.batches} usingMocks={usesMockData} onViewSuppliers={() => openPage("suppliers")} />;
+        return <OverviewPage millName={millProfile.mill?.name ?? "this mill"} suppliers={data.suppliers} renewals={data.renewals} batches={data.batches} usingMocks={usesMockData} onViewSuppliers={() => openPage("suppliers")} />;
     }
   };
 
@@ -131,12 +137,16 @@ function DashboardApp({ user, millId, onLogout }: DashboardAppProps) {
             <RotateCcw aria-hidden="true" />
             Renewals
           </button>
+          <button className={`navigation__item${activePage === "settings" ? " navigation__item--active" : ""}`} type="button" onClick={() => openPage("settings")}>
+            <Settings aria-hidden="true" />
+            Settings
+          </button>
         </nav>
 
         <div className="sidebar__profile">
           <span className="avatar">{user.email.slice(0, 2).toUpperCase()}</span>
           <span>
-            <strong>{user.role === "admin" ? "Admin account" : "Mill account"}</strong>
+            <strong>{millProfile.mill?.name ?? (user.role === "admin" ? "Admin account" : "Mill account")}</strong>
             <small>{user.email}</small>
           </span>
           <button className="icon-button" type="button" aria-label="Sign out" title="Sign out" onClick={onLogout}><LogOut aria-hidden="true" /></button>
@@ -163,7 +173,7 @@ function DashboardApp({ user, millId, onLogout }: DashboardAppProps) {
             >
               <Menu aria-hidden="true" />
             </button>
-            <span className="breadcrumb">Mill workspace</span>
+            <span className="breadcrumb">{millProfile.mill?.name ?? "Mill workspace"}</span>
             <span className="breadcrumb__separator">/</span>
             <strong>{pageLabels[activePage]}</strong>
           </div>

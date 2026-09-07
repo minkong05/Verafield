@@ -3,6 +3,7 @@ import { ArrowRight, Clock3, PackageCheck, ShieldCheck, Snowflake, Users } from 
 import type { Batch, MillDashboardStatus, MillDashboardSupplier, RenewalStatus } from "../types/api";
 
 interface OverviewPageProps {
+  millName: string;
   suppliers: MillDashboardSupplier[];
   renewals: RenewalStatus[];
   batches: Batch[];
@@ -24,7 +25,7 @@ const formatDate = (value: string) =>
     new Date(value),
   );
 
-function OverviewPage({ suppliers, renewals, batches, usingMocks, onViewSuppliers }: OverviewPageProps) {
+function OverviewPage({ millName, suppliers, renewals, batches, usingMocks, onViewSuppliers }: OverviewPageProps) {
   const counts = suppliers.reduce(
     (result, supplier) => {
       result[supplier.status] += 1;
@@ -45,7 +46,7 @@ function OverviewPage({ suppliers, renewals, batches, usingMocks, onViewSupplier
           <p className="eyebrow">Mill workspace</p>
           <h1>Overview</h1>
           <p className="text-muted">
-            Supplier compliance and evidence preparation for Sungai Murni Mill.
+            Supplier compliance and evidence preparation for {millName}.
           </p>
         </div>
         <span className="data-source-note">{usingMocks ? "Development preview data" : "Live backend data"}</span>

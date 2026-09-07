@@ -45,6 +45,25 @@ export interface PasswordChangeRequest {
   new_password: string;
 }
 
+export interface Mill {
+  id: UUID;
+  name: string;
+  mpob_licence_number: string;
+  postal_address: string;
+  email: string;
+  district: string;
+  state: MalaysiaState;
+  is_active: boolean;
+  created_at: DateTimeString;
+  updated_at: DateTimeString;
+}
+
+export interface MillContactUpdate {
+  postal_address: string;
+  email: string;
+  district: string;
+}
+
 export interface MillDashboardSupplier {
   household_id: UUID;
   mill_id: UUID;
