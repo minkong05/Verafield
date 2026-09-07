@@ -1,4 +1,5 @@
 import type { ApiErrorBody } from "../types/api";
+import { getSession } from "../auth/session";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api";
 
@@ -13,10 +14,12 @@ export class ApiError extends Error {
 }
 
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
+  const session = getSession();
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
     headers: {
       Accept: "application/json",
+      ...(session ? { Authorization: `Bearer ${session.accessToken}` } : {}),
       ...init?.headers,
     },
   });
@@ -26,5 +29,6 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
     throw new ApiError(response.status, body.detail ?? "The request could not be completed.");
   }
 
+  if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;
 }
