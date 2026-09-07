@@ -1,6 +1,7 @@
 import type { TokenResponse } from "../types/api";
 
 const SESSION_KEY = "tapak.auth.session";
+export const SESSION_EXPIRED_EVENT = "tapak:session-expired";
 
 export interface AuthSession {
   accessToken: string;
@@ -32,4 +33,9 @@ export function saveSession(token: TokenResponse): AuthSession {
 
 export function clearSession(): void {
   sessionStorage.removeItem(SESSION_KEY);
+}
+
+export function expireSession(): void {
+  clearSession();
+  window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
 }

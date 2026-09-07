@@ -36,15 +36,15 @@ const emptyBatches: Batch[] = [];
 
 interface DashboardAppProps {
   user: User;
+  millId: UUID;
   onLogout: () => void;
 }
 
-function DashboardApp({ user, onLogout }: DashboardAppProps) {
+function DashboardApp({ user, millId, onLogout }: DashboardAppProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [activePage, setActivePage] = useState<PageId>("overview");
   const [selectedSupplierId, setSelectedSupplierId] = useState<UUID | null>(null);
   const [creatingBatch, setCreatingBatch] = useState(false);
-  const millId = import.meta.env.VITE_MILL_ID ?? DEMO_MILL_ID;
   const { data, error, loading, retry, addBatch } = useDashboardData(millId);
   const selectedSupplier = data?.suppliers.find((supplier) => supplier.household_id === selectedSupplierId) ?? null;
   const selectedRenewal = data?.renewals.find((renewal) => renewal.household_id === selectedSupplierId) ?? null;
@@ -136,7 +136,7 @@ function DashboardApp({ user, onLogout }: DashboardAppProps) {
         <div className="sidebar__profile">
           <span className="avatar">{user.email.slice(0, 2).toUpperCase()}</span>
           <span>
-            <strong>Sungai Murni</strong>
+            <strong>{user.role === "admin" ? "Admin account" : "Mill account"}</strong>
             <small>{user.email}</small>
           </span>
           <button className="icon-button" type="button" aria-label="Sign out" title="Sign out" onClick={onLogout}><LogOut aria-hidden="true" /></button>
@@ -163,7 +163,7 @@ function DashboardApp({ user, onLogout }: DashboardAppProps) {
             >
               <Menu aria-hidden="true" />
             </button>
-            <span className="breadcrumb">Sungai Murni Mill</span>
+            <span className="breadcrumb">Mill workspace</span>
             <span className="breadcrumb__separator">/</span>
             <strong>{pageLabels[activePage]}</strong>
           </div>
@@ -204,7 +204,20 @@ function App() {
     return <LoginPage error={auth.error} submitting={auth.submitting} onSubmit={auth.signIn} />;
   }
 
-  return <DashboardApp user={auth.user} onLogout={auth.signOut} />;
+  const millId = auth.user.mill_id ?? import.meta.env.VITE_MILL_ID ?? (usesMockData ? DEMO_MILL_ID : null);
+
+  if (!millId) {
+    return (
+      <main className="auth-page">
+        <section className="auth-card">
+          <div><p className="eyebrow">Admin account</p><h1>Select a mill</h1><p className="text-muted">Set VITE_MILL_ID to the mill you want to inspect. A mill selector will be added with the admin workspace.</p></div>
+          <button className="button button--secondary" type="button" onClick={auth.signOut}>Sign out</button>
+        </section>
+      </main>
+    );
+  }
+
+  return <DashboardApp user={auth.user} millId={millId} onLogout={auth.signOut} />;
 }
 
 export default App;

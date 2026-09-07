@@ -1,5 +1,5 @@
 import type { ApiErrorBody } from "../types/api";
-import { getSession } from "../auth/session";
+import { expireSession, getSession } from "../auth/session";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api";
 
@@ -26,6 +26,7 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
 
   if (!response.ok) {
     const body = (await response.json().catch(() => ({}))) as ApiErrorBody;
+    if (response.status === 401 && path !== "/auth/login") expireSession();
     throw new ApiError(response.status, body.detail ?? "The request could not be completed.");
   }
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { getCurrentUser, login, logout } from "../api/auth";
-import { getSession } from "../auth/session";
+import { getSession, SESSION_EXPIRED_EVENT } from "../auth/session";
 import { usesMockData } from "../data/dashboard";
 import { DEMO_MILL_ID } from "../mocks/dashboard";
 import type { LoginRequest, User } from "../types/api";
@@ -38,6 +38,15 @@ export function useAuth() {
       .then(setUser)
       .catch(() => logout())
       .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    const handleExpiredSession = () => {
+      setUser(null);
+      setError("Your session expired. Please sign in again.");
+    };
+    window.addEventListener(SESSION_EXPIRED_EVENT, handleExpiredSession);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, handleExpiredSession);
   }, []);
 
   const signIn = async (credentials: LoginRequest) => {
