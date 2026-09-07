@@ -1,4 +1,4 @@
-import { FileCheck2, LogOut, Menu, RefreshCw, RotateCcw, Settings, Users, X } from "lucide-react";
+import { Building2, FileCheck2, LogOut, Menu, RefreshCw, RotateCcw, Settings, Users, X } from "lucide-react";
 import { useState } from "react";
 
 import SupplierDrawer from "./components/SupplierDrawer";
@@ -12,6 +12,7 @@ import { useReviewQueue } from "./hooks/useReviewQueue";
 import { useEvidencePacks } from "./hooks/useEvidencePacks";
 import { useAuth } from "./hooks/useAuth";
 import { useMill } from "./hooks/useMill";
+import { useAdminMills } from "./hooks/useAdminMills";
 import { DEMO_MILL_ID } from "./mocks/dashboard";
 import EvidencePacksPage from "./pages/EvidencePacksPage";
 import OverviewPage from "./pages/OverviewPage";
@@ -20,6 +21,7 @@ import ReviewQueuePage from "./pages/ReviewQueuePage";
 import SuppliersPage from "./pages/SuppliersPage";
 import LoginPage from "./pages/LoginPage";
 import SettingsPage from "./pages/SettingsPage";
+import MillSelectorPage from "./pages/MillSelectorPage";
 import type { Batch, MillDashboardSupplier, RenewalStatus, User, UUID } from "./types/api";
 
 type PageId = "overview" | "suppliers" | "review" | "packs" | "renewals" | "settings";
@@ -36,14 +38,16 @@ const pageLabels: Record<PageId, string> = {
 const emptySuppliers: MillDashboardSupplier[] = [];
 const emptyRenewals: RenewalStatus[] = [];
 const emptyBatches: Batch[] = [];
+const ADMIN_MILL_KEY = "tapak.admin.mill-id";
 
 interface DashboardAppProps {
   user: User;
   millId: UUID;
   onLogout: () => void;
+  onChangeMill?: () => void;
 }
 
-function DashboardApp({ user, millId, onLogout }: DashboardAppProps) {
+function DashboardApp({ user, millId, onLogout, onChangeMill }: DashboardAppProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [activePage, setActivePage] = useState<PageId>("overview");
   const [selectedSupplierId, setSelectedSupplierId] = useState<UUID | null>(null);
@@ -141,6 +145,7 @@ function DashboardApp({ user, millId, onLogout }: DashboardAppProps) {
             <Settings aria-hidden="true" />
             Settings
           </button>
+          {onChangeMill && <button className="navigation__item" type="button" onClick={onChangeMill}><Building2 aria-hidden="true" />Change mill</button>}
         </nav>
 
         <div className="sidebar__profile">
@@ -205,6 +210,23 @@ function DashboardApp({ user, millId, onLogout }: DashboardAppProps) {
 
 function App() {
   const auth = useAuth();
+  const [adminMillId, setAdminMillId] = useState<UUID | null>(() => sessionStorage.getItem(ADMIN_MILL_KEY));
+  const adminMills = useAdminMills(auth.user?.role === "admin");
+
+  const selectAdminMill = (millId: UUID) => {
+    sessionStorage.setItem(ADMIN_MILL_KEY, millId);
+    setAdminMillId(millId);
+  };
+
+  const clearAdminMill = () => {
+    sessionStorage.removeItem(ADMIN_MILL_KEY);
+    setAdminMillId(null);
+  };
+
+  const signOut = () => {
+    clearAdminMill();
+    auth.signOut();
+  };
 
   if (auth.loading) {
     return <main className="auth-page"><PageState kind="loading" message="Restoring your session." /></main>;
@@ -214,20 +236,24 @@ function App() {
     return <LoginPage error={auth.error} submitting={auth.submitting} onSubmit={auth.signIn} />;
   }
 
-  const millId = auth.user.mill_id ?? import.meta.env.VITE_MILL_ID ?? (usesMockData ? DEMO_MILL_ID : null);
+  if (auth.user.role === "admin" && !adminMillId) {
+    return <MillSelectorPage mills={adminMills.mills} loading={adminMills.loading} error={adminMills.error} onRetry={adminMills.retry} onSelect={selectAdminMill} onLogout={signOut} />;
+  }
+
+  const millId = auth.user.mill_id ?? adminMillId ?? (usesMockData ? DEMO_MILL_ID : null);
 
   if (!millId) {
     return (
       <main className="auth-page">
         <section className="auth-card">
           <div><p className="eyebrow">Admin account</p><h1>Select a mill</h1><p className="text-muted">Set VITE_MILL_ID to the mill you want to inspect. A mill selector will be added with the admin workspace.</p></div>
-          <button className="button button--secondary" type="button" onClick={auth.signOut}>Sign out</button>
+          <button className="button button--secondary" type="button" onClick={signOut}>Sign out</button>
         </section>
       </main>
     );
   }
 
-  return <DashboardApp user={auth.user} millId={millId} onLogout={auth.signOut} />;
+  return <DashboardApp user={auth.user} millId={millId} onLogout={signOut} onChangeMill={auth.user.role === "admin" ? clearAdminMill : undefined} />;
 }
 
 export default App;

@@ -5,6 +5,10 @@ export function getMill(millId: UUID): Promise<Mill> {
   return apiRequest(`/mills/${millId}`);
 }
 
+export function listMills(): Promise<Mill[]> {
+  return apiRequest("/mills");
+}
+
 export function updateMill(millId: UUID, payload: MillContactUpdate): Promise<Mill> {
   return apiRequest(`/mills/${millId}`, {
     method: "PATCH",

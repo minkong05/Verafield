@@ -1,5 +1,5 @@
 import { changePassword } from "../api/auth";
-import { getMill, updateMill } from "../api/mills";
+import { getMill, listMills, updateMill } from "../api/mills";
 import type { Mill, MillContactUpdate, PasswordChangeRequest, UUID } from "../types/api";
 import { usesMockData } from "./dashboard";
 
@@ -18,6 +18,10 @@ const demoMill: Mill = {
 
 export function loadMill(millId: UUID): Promise<Mill> {
   return usesMockData ? Promise.resolve({ ...demoMill, id: millId }) : getMill(millId);
+}
+
+export function loadMills(): Promise<Mill[]> {
+  return usesMockData ? Promise.resolve([demoMill]) : listMills();
 }
 
 export function saveMillContact(mill: Mill, values: MillContactUpdate): Promise<Mill> {
