@@ -22,9 +22,10 @@ import SuppliersPage from "./pages/SuppliersPage";
 import LoginPage from "./pages/LoginPage";
 import SettingsPage from "./pages/SettingsPage";
 import MillSelectorPage from "./pages/MillSelectorPage";
-import type { Batch, MillDashboardSupplier, RenewalStatus, User, UUID } from "./types/api";
+import AdminMillsPage from "./pages/AdminMillsPage";
+import type { Batch, Mill, MillAdminUpdate, MillCreateInput, MillDashboardSupplier, RenewalStatus, User, UUID } from "./types/api";
 
-type PageId = "overview" | "suppliers" | "review" | "packs" | "renewals" | "settings";
+type PageId = "overview" | "suppliers" | "review" | "packs" | "renewals" | "settings" | "mills";
 
 const pageLabels: Record<PageId, string> = {
   overview: "Overview",
@@ -33,6 +34,7 @@ const pageLabels: Record<PageId, string> = {
   packs: "Evidence packs",
   renewals: "Renewals",
   settings: "Settings",
+  mills: "Mills",
 };
 
 const emptySuppliers: MillDashboardSupplier[] = [];
@@ -45,9 +47,13 @@ interface DashboardAppProps {
   millId: UUID;
   onLogout: () => void;
   onChangeMill?: () => void;
+  adminMills?: Mill[];
+  onCreateMill?: (values: MillCreateInput) => Promise<void>;
+  onUpdateMill?: (mill: Mill, values: MillAdminUpdate) => Promise<void>;
+  onOpenMill?: (millId: UUID) => void;
 }
 
-function DashboardApp({ user, millId, onLogout, onChangeMill }: DashboardAppProps) {
+function DashboardApp({ user, millId, onLogout, onChangeMill, adminMills, onCreateMill, onUpdateMill, onOpenMill }: DashboardAppProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [activePage, setActivePage] = useState<PageId>("overview");
   const [selectedSupplierId, setSelectedSupplierId] = useState<UUID | null>(null);
@@ -86,6 +92,10 @@ function DashboardApp({ user, millId, onLogout, onChangeMill }: DashboardAppProp
     }
 
     switch (activePage) {
+      case "mills":
+        return adminMills && onCreateMill && onUpdateMill && onOpenMill
+          ? <AdminMillsPage mills={adminMills} onCreate={onCreateMill} onUpdate={onUpdateMill} onOpen={onOpenMill} />
+          : null;
       case "settings":
         return <SettingsPage mill={millProfile.mill} loading={millProfile.loading} error={millProfile.error} onUpdateContact={millProfile.updateContact} />;
       case "suppliers":
@@ -146,6 +156,7 @@ function DashboardApp({ user, millId, onLogout, onChangeMill }: DashboardAppProp
             Settings
           </button>
           {onChangeMill && <button className="navigation__item" type="button" onClick={onChangeMill}><Building2 aria-hidden="true" />Change mill</button>}
+          {user.role === "admin" && <button className={`navigation__item${activePage === "mills" ? " navigation__item--active" : ""}`} type="button" onClick={() => openPage("mills")}><Building2 aria-hidden="true" />Manage mills</button>}
         </nav>
 
         <div className="sidebar__profile">
@@ -253,7 +264,16 @@ function App() {
     );
   }
 
-  return <DashboardApp user={auth.user} millId={millId} onLogout={signOut} onChangeMill={auth.user.role === "admin" ? clearAdminMill : undefined} />;
+  return <DashboardApp
+    user={auth.user}
+    millId={millId}
+    onLogout={signOut}
+    onChangeMill={auth.user.role === "admin" ? clearAdminMill : undefined}
+    adminMills={auth.user.role === "admin" ? adminMills.mills : undefined}
+    onCreateMill={auth.user.role === "admin" ? adminMills.create : undefined}
+    onUpdateMill={auth.user.role === "admin" ? adminMills.update : undefined}
+    onOpenMill={auth.user.role === "admin" ? selectAdminMill : undefined}
+  />;
 }
 
 export default App;

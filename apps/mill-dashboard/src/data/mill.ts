@@ -1,6 +1,6 @@
 import { changePassword } from "../api/auth";
-import { getMill, listMills, updateMill } from "../api/mills";
-import type { Mill, MillContactUpdate, PasswordChangeRequest, UUID } from "../types/api";
+import { createMill, getMill, listMills, updateMill, updateMillAsAdmin } from "../api/mills";
+import type { Mill, MillAdminUpdate, MillContactUpdate, MillCreateInput, PasswordChangeRequest, UUID } from "../types/api";
 import { usesMockData } from "./dashboard";
 
 const demoMill: Mill = {
@@ -22,6 +22,18 @@ export function loadMill(millId: UUID): Promise<Mill> {
 
 export function loadMills(): Promise<Mill[]> {
   return usesMockData ? Promise.resolve([demoMill]) : listMills();
+}
+
+export function registerMill(values: MillCreateInput): Promise<Mill> {
+  if (!usesMockData) return createMill(values);
+  const now = new Date().toISOString();
+  return Promise.resolve({ id: crypto.randomUUID(), ...values, is_active: true, created_at: now, updated_at: now });
+}
+
+export function saveMillAsAdmin(mill: Mill, values: MillAdminUpdate): Promise<Mill> {
+  return usesMockData
+    ? Promise.resolve({ ...mill, ...values, updated_at: new Date().toISOString() })
+    : updateMillAsAdmin(mill.id, values);
 }
 
 export function saveMillContact(mill: Mill, values: MillContactUpdate): Promise<Mill> {

@@ -64,6 +64,17 @@ export interface MillContactUpdate {
   district: string;
 }
 
+export interface MillCreateInput {
+  name: string;
+  mpob_licence_number: string;
+  postal_address: string;
+  email: string;
+  district: string;
+  state: MalaysiaState;
+}
+
+export type MillAdminUpdate = Partial<MillCreateInput> & { is_active?: boolean };
+
 export interface MillDashboardSupplier {
   household_id: UUID;
   mill_id: UUID;
