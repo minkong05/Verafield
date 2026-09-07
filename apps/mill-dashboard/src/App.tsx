@@ -13,6 +13,7 @@ import { useEvidencePacks } from "./hooks/useEvidencePacks";
 import { useAuth } from "./hooks/useAuth";
 import { useMill } from "./hooks/useMill";
 import { useAdminMills } from "./hooks/useAdminMills";
+import { useAdminUsers } from "./hooks/useAdminUsers";
 import { DEMO_MILL_ID } from "./mocks/dashboard";
 import EvidencePacksPage from "./pages/EvidencePacksPage";
 import OverviewPage from "./pages/OverviewPage";
@@ -23,9 +24,10 @@ import LoginPage from "./pages/LoginPage";
 import SettingsPage from "./pages/SettingsPage";
 import MillSelectorPage from "./pages/MillSelectorPage";
 import AdminMillsPage from "./pages/AdminMillsPage";
-import type { Batch, Mill, MillAdminUpdate, MillCreateInput, MillDashboardSupplier, RenewalStatus, User, UUID } from "./types/api";
+import AdminUsersPage from "./pages/AdminUsersPage";
+import type { Batch, Mill, MillAdminUpdate, MillCreateInput, MillDashboardSupplier, RenewalStatus, User, UserCreateInput, UUID } from "./types/api";
 
-type PageId = "overview" | "suppliers" | "review" | "packs" | "renewals" | "settings" | "mills";
+type PageId = "overview" | "suppliers" | "review" | "packs" | "renewals" | "settings" | "mills" | "users";
 
 const pageLabels: Record<PageId, string> = {
   overview: "Overview",
@@ -35,6 +37,7 @@ const pageLabels: Record<PageId, string> = {
   renewals: "Renewals",
   settings: "Settings",
   mills: "Mills",
+  users: "Users",
 };
 
 const emptySuppliers: MillDashboardSupplier[] = [];
@@ -51,9 +54,15 @@ interface DashboardAppProps {
   onCreateMill?: (values: MillCreateInput) => Promise<void>;
   onUpdateMill?: (mill: Mill, values: MillAdminUpdate) => Promise<void>;
   onOpenMill?: (millId: UUID) => void;
+  adminUsers?: User[];
+  usersLoading?: boolean;
+  usersError?: string | null;
+  onRetryUsers?: () => void;
+  onCreateUser?: (values: UserCreateInput) => Promise<void>;
+  onToggleUser?: (user: User) => Promise<void>;
 }
 
-function DashboardApp({ user, millId, onLogout, onChangeMill, adminMills, onCreateMill, onUpdateMill, onOpenMill }: DashboardAppProps) {
+function DashboardApp({ user, millId, onLogout, onChangeMill, adminMills, onCreateMill, onUpdateMill, onOpenMill, adminUsers, usersLoading, usersError, onRetryUsers, onCreateUser, onToggleUser }: DashboardAppProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [activePage, setActivePage] = useState<PageId>("overview");
   const [selectedSupplierId, setSelectedSupplierId] = useState<UUID | null>(null);
@@ -92,6 +101,10 @@ function DashboardApp({ user, millId, onLogout, onChangeMill, adminMills, onCrea
     }
 
     switch (activePage) {
+      case "users":
+        return adminUsers && adminMills && onRetryUsers && onCreateUser && onToggleUser
+          ? <AdminUsersPage currentUserId={user.id} users={adminUsers} mills={adminMills} loading={Boolean(usersLoading)} error={usersError ?? null} onRetry={onRetryUsers} onCreate={onCreateUser} onToggle={onToggleUser} />
+          : null;
       case "mills":
         return adminMills && onCreateMill && onUpdateMill && onOpenMill
           ? <AdminMillsPage mills={adminMills} onCreate={onCreateMill} onUpdate={onUpdateMill} onOpen={onOpenMill} />
@@ -157,6 +170,7 @@ function DashboardApp({ user, millId, onLogout, onChangeMill, adminMills, onCrea
           </button>
           {onChangeMill && <button className="navigation__item" type="button" onClick={onChangeMill}><Building2 aria-hidden="true" />Change mill</button>}
           {user.role === "admin" && <button className={`navigation__item${activePage === "mills" ? " navigation__item--active" : ""}`} type="button" onClick={() => openPage("mills")}><Building2 aria-hidden="true" />Manage mills</button>}
+          {user.role === "admin" && <button className={`navigation__item${activePage === "users" ? " navigation__item--active" : ""}`} type="button" onClick={() => openPage("users")}><Users aria-hidden="true" />Manage users</button>}
         </nav>
 
         <div className="sidebar__profile">
@@ -223,6 +237,7 @@ function App() {
   const auth = useAuth();
   const [adminMillId, setAdminMillId] = useState<UUID | null>(() => sessionStorage.getItem(ADMIN_MILL_KEY));
   const adminMills = useAdminMills(auth.user?.role === "admin");
+  const adminUsers = useAdminUsers(auth.user?.role === "admin");
 
   const selectAdminMill = (millId: UUID) => {
     sessionStorage.setItem(ADMIN_MILL_KEY, millId);
@@ -273,6 +288,12 @@ function App() {
     onCreateMill={auth.user.role === "admin" ? adminMills.create : undefined}
     onUpdateMill={auth.user.role === "admin" ? adminMills.update : undefined}
     onOpenMill={auth.user.role === "admin" ? selectAdminMill : undefined}
+    adminUsers={auth.user.role === "admin" ? adminUsers.users : undefined}
+    usersLoading={adminUsers.loading}
+    usersError={adminUsers.error}
+    onRetryUsers={auth.user.role === "admin" ? adminUsers.retry : undefined}
+    onCreateUser={auth.user.role === "admin" ? adminUsers.create : undefined}
+    onToggleUser={auth.user.role === "admin" ? adminUsers.toggle : undefined}
   />;
 }
 

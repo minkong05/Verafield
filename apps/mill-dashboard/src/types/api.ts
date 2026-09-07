@@ -40,6 +40,13 @@ export interface User {
   updated_at: DateTimeString;
 }
 
+export interface UserCreateInput {
+  email: string;
+  password: string;
+  role: UserRole;
+  mill_id: UUID | null;
+}
+
 export interface PasswordChangeRequest {
   current_password: string;
   new_password: string;
