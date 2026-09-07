@@ -1,4 +1,4 @@
-import { FileCheck2, Menu, RefreshCw, RotateCcw, Users, X } from "lucide-react";
+import { FileCheck2, LogOut, Menu, RefreshCw, RotateCcw, Users, X } from "lucide-react";
 import { useState } from "react";
 
 import SupplierDrawer from "./components/SupplierDrawer";
@@ -10,13 +10,15 @@ import { useDashboardData } from "./hooks/useDashboardData";
 import { useSupplierDetail } from "./hooks/useSupplierDetail";
 import { useReviewQueue } from "./hooks/useReviewQueue";
 import { useEvidencePacks } from "./hooks/useEvidencePacks";
+import { useAuth } from "./hooks/useAuth";
 import { DEMO_MILL_ID } from "./mocks/dashboard";
 import EvidencePacksPage from "./pages/EvidencePacksPage";
 import OverviewPage from "./pages/OverviewPage";
 import RenewalsPage from "./pages/RenewalsPage";
 import ReviewQueuePage from "./pages/ReviewQueuePage";
 import SuppliersPage from "./pages/SuppliersPage";
-import type { Batch, MillDashboardSupplier, RenewalStatus, UUID } from "./types/api";
+import LoginPage from "./pages/LoginPage";
+import type { Batch, MillDashboardSupplier, RenewalStatus, User, UUID } from "./types/api";
 
 type PageId = "overview" | "suppliers" | "review" | "packs" | "renewals";
 
@@ -32,7 +34,12 @@ const emptySuppliers: MillDashboardSupplier[] = [];
 const emptyRenewals: RenewalStatus[] = [];
 const emptyBatches: Batch[] = [];
 
-function App() {
+interface DashboardAppProps {
+  user: User;
+  onLogout: () => void;
+}
+
+function DashboardApp({ user, onLogout }: DashboardAppProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [activePage, setActivePage] = useState<PageId>("overview");
   const [selectedSupplierId, setSelectedSupplierId] = useState<UUID | null>(null);
@@ -127,11 +134,12 @@ function App() {
         </nav>
 
         <div className="sidebar__profile">
-          <span className="avatar">SM</span>
+          <span className="avatar">{user.email.slice(0, 2).toUpperCase()}</span>
           <span>
             <strong>Sungai Murni</strong>
-            <small>Mill account</small>
+            <small>{user.email}</small>
           </span>
+          <button className="icon-button" type="button" aria-label="Sign out" title="Sign out" onClick={onLogout}><LogOut aria-hidden="true" /></button>
         </div>
       </aside>
 
@@ -183,6 +191,20 @@ function App() {
       />
     </div>
   );
+}
+
+function App() {
+  const auth = useAuth();
+
+  if (auth.loading) {
+    return <main className="auth-page"><PageState kind="loading" message="Restoring your session." /></main>;
+  }
+
+  if (!auth.user) {
+    return <LoginPage error={auth.error} submitting={auth.submitting} onSubmit={auth.signIn} />;
+  }
+
+  return <DashboardApp user={auth.user} onLogout={auth.signOut} />;
 }
 
 export default App;
