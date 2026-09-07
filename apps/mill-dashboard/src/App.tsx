@@ -73,13 +73,14 @@ function DashboardApp({ user, millId, onLogout, onChangeMill, adminMills, onCrea
   const selectedRenewal = data?.renewals.find((renewal) => renewal.household_id === selectedSupplierId) ?? null;
   const supplierDetail = useSupplierDetail(selectedSupplier, selectedRenewal);
   const reviewQueue = useReviewQueue(
-    activePage === "review" && Boolean(data),
+    user.role === "admin" && activePage === "review" && Boolean(data),
     data?.suppliers ?? emptySuppliers,
     data?.renewals ?? emptyRenewals,
   );
   const evidencePacks = useEvidencePacks(
     activePage === "packs" && Boolean(data),
     data?.batches ?? emptyBatches,
+    user.email,
   );
 
   const openPage = (page: PageId) => {
@@ -112,11 +113,11 @@ function DashboardApp({ user, millId, onLogout, onChangeMill, adminMills, onCrea
       case "settings":
         return <SettingsPage mill={millProfile.mill} loading={millProfile.loading} error={millProfile.error} onUpdateContact={millProfile.updateContact} />;
       case "suppliers":
-        return <SuppliersPage suppliers={data.suppliers} onSelectSupplier={setSelectedSupplierId} />;
+        return <SuppliersPage suppliers={data.suppliers} canInspect={user.role === "admin"} onSelectSupplier={setSelectedSupplierId} />;
       case "review":
         return <ReviewQueuePage items={reviewQueue.items} loading={reviewQueue.loading} error={reviewQueue.error} onRetry={reviewQueue.retry} onSelectSupplier={setSelectedSupplierId} />;
       case "packs":
-        return <EvidencePacksPage batches={data.batches} records={evidencePacks.records} loading={evidencePacks.loading} error={evidencePacks.pageError} onGenerate={evidencePacks.generate} onCreate={() => setCreatingBatch(true)} />;
+        return <EvidencePacksPage batches={data.batches} records={evidencePacks.records} loading={evidencePacks.loading} error={evidencePacks.pageError} onGenerate={evidencePacks.generate} onCreate={user.role === "admin" ? () => setCreatingBatch(true) : undefined} />;
       case "renewals":
         return <RenewalsPage suppliers={data.suppliers} renewals={data.renewals} />;
       default:
@@ -152,10 +153,10 @@ function DashboardApp({ user, millId, onLogout, onChangeMill, adminMills, onCrea
             <Users aria-hidden="true" />
             Suppliers
           </button>
-          <button className={`navigation__item${activePage === "review" ? " navigation__item--active" : ""}`} type="button" onClick={() => openPage("review")}>
+          {user.role === "admin" && <button className={`navigation__item${activePage === "review" ? " navigation__item--active" : ""}`} type="button" onClick={() => openPage("review")}>
             <FileCheck2 aria-hidden="true" />
             Review queue
-          </button>
+          </button>}
           <button className={`navigation__item${activePage === "packs" ? " navigation__item--active" : ""}`} type="button" onClick={() => openPage("packs")}>
             <FileCheck2 aria-hidden="true" />
             Evidence packs
@@ -222,12 +223,13 @@ function DashboardApp({ user, millId, onLogout, onChangeMill, adminMills, onCrea
         onClose={() => setSelectedSupplierId(null)}
       />
       <CreateBatchDialog
-        open={creatingBatch}
+        open={creatingBatch && user.role === "admin"}
         millId={millId}
         suppliers={data?.suppliers ?? emptySuppliers}
         renewals={data?.renewals ?? emptyRenewals}
         onClose={() => setCreatingBatch(false)}
         onCreated={addBatch}
+        createdBy={user.email}
       />
     </div>
   );
@@ -272,7 +274,7 @@ function App() {
     return (
       <main className="auth-page">
         <section className="auth-card">
-          <div><p className="eyebrow">Admin account</p><h1>Select a mill</h1><p className="text-muted">Set VITE_MILL_ID to the mill you want to inspect. A mill selector will be added with the admin workspace.</p></div>
+          <div><p className="eyebrow">Mill workspace</p><h1>No mill available</h1><p className="text-muted">This account is not assigned to a mill. Contact a TAPAK administrator.</p></div>
           <button className="button button--secondary" type="button" onClick={signOut}>Sign out</button>
         </section>
       </main>
