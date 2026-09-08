@@ -38,7 +38,6 @@ Copy-Item .env.example .env
 | --- | --- | --- |
 | `VITE_API_BASE_URL` | `/api` | Uses the Vite proxy to reach FastAPI on port 8000. |
 | `VITE_USE_MOCKS` | `true` | Keeps the UI usable without a database or backend process. Set to `false` for integration testing. |
-| `VITE_MILL_ID` | A real mill UUID | Required because backend routes are explicitly mill-scoped until auth supplies tenant context. |
 
 Restart Vite after changing `.env`; Vite reads these values at startup.
 
@@ -50,6 +49,8 @@ Restart Vite after changing `.env`; Vite reads these values at startup.
 - Evidence packs: create a batch, inspect pack status, generate a pack and download the backend JSON snapshot.
 - Renewals: current, lapsed and not-yet-issued annual review states.
 - Light/dark themes and responsive navigation.
+- Bearer-token login, session expiry, logout, mill account settings and password change.
+- Admin mill selection, mill registry and user-account management.
 
 The UI treats a `404` from an optional household compliance record as "not collected". Network errors and unexpected server failures remain visible as errors. Evidence-pack generation maps a `422` response to `Blocked`, because the backend refuses packs containing uncleared households.
 
@@ -63,12 +64,15 @@ npm install
 npm run dev
 ```
 
-Set `VITE_USE_MOCKS=false` and replace `VITE_MILL_ID` with the UUID of a seeded mill. The seed data must include households and plots to exercise batch creation; optional verification records may be absent and will appear as missing in the UI.
+Set `VITE_USE_MOCKS=false`, then sign in with an account created by the backend admin workflow. A mill user receives its mill context from `/auth/me`; an admin selects a registered mill after login. Seed data must include households and plots to exercise batch creation; optional verification records may be absent and will appear as missing in the admin UI.
 
-The dashboard currently sends `Mill dashboard analyst` as `created_by`/`generated_by`. Replace this with the signed-in user identity after the auth routes are available.
+The dashboard sends the signed-in user's email as `created_by` and `generated_by` where the current backend schemas require a client-supplied identity string.
 
 ## Backend endpoints consumed
 
+- `POST /auth/login`, `GET /auth/me`, `POST /auth/change-password`
+- `GET/POST /mills`, `GET/PATCH /mills/{mill_id}`
+- `GET/POST/PATCH /users`
 - `GET /mills/{mill_id}/dashboard`
 - `GET /mills/{mill_id}/renewal-status`
 - `GET/POST /mills/{mill_id}/batches`
@@ -78,9 +82,9 @@ The dashboard currently sends `Mill dashboard analyst` as `created_by`/`generate
 ## Known backend dependencies
 
 - There is no household-detail GET route, so live mode cannot display household email/postal address from the dashboard response.
-- There is no mill-wide plots route; Create Batch loads plots by requesting each supplier's details when the dialog opens.
+- There is no mill-wide plots route. Evidence-collection and plot-read routes are admin-only, so Create Batch is currently exposed only to admins, which can aggregate plots from supplier details. The backend permits a mill user to post a batch but does not provide that user an authorised way to discover eligible plot IDs.
 - There is no review-queue route; the frontend derives the queue from verification responses.
-- Authentication and user-derived tenant context remain pending backend auth routes.
+- Evidence-collection routes are admin-only. Supplier evidence details and the derived review queue are therefore visible only to admins; mill users see the dashboard status supplied by the mill-facing endpoint.
 
 ## Non-goals
 

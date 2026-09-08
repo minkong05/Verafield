@@ -11,6 +11,7 @@ interface CreateBatchDialogProps {
   renewals: RenewalStatus[];
   onClose: () => void;
   onCreated: (batch: Batch) => void;
+  createdBy: string;
 }
 
 const today = () => {
@@ -21,7 +22,7 @@ const today = () => {
   return `${year}-${month}-${day}`;
 };
 
-function CreateBatchDialog({ open, millId, suppliers, renewals, onClose, onCreated }: CreateBatchDialogProps) {
+function CreateBatchDialog({ open, millId, suppliers, renewals, onClose, onCreated, createdBy }: CreateBatchDialogProps) {
   const [plots, setPlots] = useState<PlotOption[]>([]);
   const [loadingPlots, setLoadingPlots] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -92,7 +93,7 @@ function CreateBatchDialog({ open, millId, suppliers, renewals, onClose, onCreat
           <fieldset><legend>Source</legend>
             <label><span>Plot</span><select name="plot_id" required disabled={loadingPlots || plots.length === 0}><option value="">{loadingPlots ? "Loading plots…" : plots.length ? "Select a plot" : "No plots available"}</option>{plots.map(({ plot, supplier }) => <option key={plot.id} value={plot.id}>{supplier.name} · {supplier.district} · {Number(plot.area_ha)} ha · {plot.id.slice(0, 8)}</option>)}</select></label>
             <label><span>Harvest date</span><input name="harvest_date" type="date" max={today()} defaultValue={today()} required /></label>
-            <label><span>Created by</span><input name="created_by" defaultValue="Mill dashboard analyst" required /></label>
+            <label><span>Created by</span><input name="created_by" defaultValue={createdBy} required /></label>
           </fieldset>
           {error && <p className="form-error" role="alert">{error}</p>}
           <footer className="batch-form__actions"><button className="button button--secondary" type="button" onClick={onClose}>Cancel</button><button className="button button--primary" type="submit" disabled={submitting || loadingPlots || plots.length === 0}>{submitting && <LoaderCircle className="page-state__spinner" aria-hidden="true" />}{submitting ? "Creating…" : "Create batch"}</button></footer>

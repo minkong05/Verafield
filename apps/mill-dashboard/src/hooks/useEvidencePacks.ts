@@ -33,7 +33,7 @@ const mockPack = (batch: Batch): EvidencePack => ({
   generated_at: new Date().toISOString(),
 });
 
-export function useEvidencePacks(enabled: boolean, batches: Batch[]) {
+export function useEvidencePacks(enabled: boolean, batches: Batch[], generatedBy: string) {
   const [records, setRecords] = useState<EvidencePackRecords>({});
   const [loading, setLoading] = useState(false);
   const [pageError, setPageError] = useState<string | null>(null);
@@ -77,7 +77,7 @@ export function useEvidencePacks(enabled: boolean, batches: Batch[]) {
   const generate = async (batch: Batch) => {
     setRecords((current) => ({ ...current, [batch.id]: { ...(current[batch.id] ?? { state: "not_generated", pack: null }), busy: true, error: null } }));
     try {
-      const pack = usesMockData ? mockPack(batch) : await generateEvidencePack(batch.mill_id, batch.id, "Mill dashboard analyst");
+      const pack = usesMockData ? mockPack(batch) : await generateEvidencePack(batch.mill_id, batch.id, generatedBy);
       setRecords((current) => ({ ...current, [batch.id]: { state: "ready", pack, busy: false, error: null } }));
     } catch (reason) {
       if (reason instanceof ApiError && reason.status === 409) {

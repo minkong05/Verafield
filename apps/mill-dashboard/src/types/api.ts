@@ -17,6 +17,70 @@ export type FieldVerificationStatus = "cleared" | "needs_review";
 export type DeforestationStatus = "compliant" | "non_compliant" | "needs_review";
 export type LandOwnershipStatus = "cleared" | "failed" | "needs_follow_up";
 export type MalaysiaState = "sabah" | "sarawak";
+export type UserRole = "admin" | "mill_user";
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface TokenResponse {
+  access_token: string;
+  token_type: "bearer";
+  expires_at: DateTimeString;
+}
+
+export interface User {
+  id: UUID;
+  email: string;
+  role: UserRole;
+  mill_id: UUID | null;
+  is_active: boolean;
+  created_at: DateTimeString;
+  updated_at: DateTimeString;
+}
+
+export interface UserCreateInput {
+  email: string;
+  password: string;
+  role: UserRole;
+  mill_id: UUID | null;
+}
+
+export interface PasswordChangeRequest {
+  current_password: string;
+  new_password: string;
+}
+
+export interface Mill {
+  id: UUID;
+  name: string;
+  mpob_licence_number: string;
+  postal_address: string;
+  email: string;
+  district: string;
+  state: MalaysiaState;
+  is_active: boolean;
+  created_at: DateTimeString;
+  updated_at: DateTimeString;
+}
+
+export interface MillContactUpdate {
+  postal_address: string;
+  email: string;
+  district: string;
+}
+
+export interface MillCreateInput {
+  name: string;
+  mpob_licence_number: string;
+  postal_address: string;
+  email: string;
+  district: string;
+  state: MalaysiaState;
+}
+
+export type MillAdminUpdate = Partial<MillCreateInput> & { is_active?: boolean };
 
 export interface MillDashboardSupplier {
   household_id: UUID;

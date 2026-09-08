@@ -26,7 +26,7 @@ interface EvidencePacksPageProps {
   loading: boolean;
   error: string | null;
   onGenerate: (batch: Batch) => void;
-  onCreate: () => void;
+  onCreate?: () => void;
 }
 
 function downloadPack(batch: Batch, record: EvidencePackRecord) {
@@ -49,11 +49,11 @@ function EvidencePacksPage({ batches, records, loading, error, onGenerate, onCre
           <h1>Evidence packs</h1>
           <p className="text-muted">Shipment batches and their Annex II evidence output.</p>
         </div>
-        <button className="button button--primary" type="button" onClick={onCreate}><Plus aria-hidden="true" /> Create batch</button>
+        {onCreate && <button className="button button--primary" type="button" onClick={onCreate}><Plus aria-hidden="true" /> Create batch</button>}
       </header>
 
       <section className="data-panel">
-        {loading ? <PageState kind="loading" message="Checking evidence pack status for each batch." /> : error ? <PageState kind="error" message={error} /> : batches.length === 0 ? <PageState kind="empty" message="Create a shipment batch before generating an evidence pack." /> :
+        {loading ? <PageState kind="loading" message="Checking evidence pack status for each batch." /> : error ? <PageState kind="error" message={error} /> : batches.length === 0 ? <PageState kind="empty" message={onCreate ? "Create a shipment batch before generating an evidence pack." : "No shipment batches are available."} /> :
         <div className="table-scroll">
           <table className="data-table">
             <thead><tr><th>Batch</th><th>Recipient</th><th>Net mass</th><th>Created</th><th>Pack status</th><th></th></tr></thead>

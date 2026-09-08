@@ -6,6 +6,7 @@ import type { MillDashboardStatus, MillDashboardSupplier, UUID } from "../types/
 
 interface SuppliersPageProps {
   suppliers: MillDashboardSupplier[];
+  canInspect: boolean;
   onSelectSupplier: (householdId: UUID) => void;
 }
 
@@ -15,7 +16,7 @@ const statusLabels: Record<MillDashboardStatus, string> = {
   frozen: "Frozen",
 };
 
-function SuppliersPage({ suppliers: supplierRecords, onSelectSupplier }: SuppliersPageProps) {
+function SuppliersPage({ suppliers: supplierRecords, canInspect, onSelectSupplier }: SuppliersPageProps) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<MillDashboardStatus | "all">("all");
 
@@ -62,13 +63,13 @@ function SuppliersPage({ suppliers: supplierRecords, onSelectSupplier }: Supplie
           </label>
         </header>
         <div className="table-scroll">
-          <table className="data-table data-table--interactive">
+          <table className={`data-table${canInspect ? " data-table--interactive" : ""}`}>
             <thead>
               <tr>
                 <th>Supplier</th>
                 <th>District</th>
-                <th>MPOB licence</th>
-                <th>Plots</th>
+                {canInspect && <th>MPOB licence</th>}
+                {canInspect && <th>Plots</th>}
                 <th>Status</th>
               </tr>
             </thead>
@@ -76,11 +77,11 @@ function SuppliersPage({ suppliers: supplierRecords, onSelectSupplier }: Supplie
               {suppliers.map((supplier) => {
                 const detail = supplierDetails[supplier.household_id];
                 return (
-                  <tr key={supplier.household_id} onClick={() => onSelectSupplier(supplier.household_id)}>
+                  <tr key={supplier.household_id} onClick={canInspect ? () => onSelectSupplier(supplier.household_id) : undefined}>
                     <td className="data-table__primary">{supplier.name}</td>
                     <td>{supplier.district}</td>
-                    <td>{detail?.nationalSystems?.mpob_licence_number ?? "—"}</td>
-                    <td>{detail?.plots.length ?? "—"}</td>
+                    {canInspect && <td>{detail?.nationalSystems?.mpob_licence_number ?? "—"}</td>}
+                    {canInspect && <td>{detail?.plots.length ?? "—"}</td>}
                     <td>
                       <span className={`status status--${supplier.status}`}>
                         {statusLabels[supplier.status]}
